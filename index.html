@@ -79,7 +79,11 @@
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                         <label class="block text-xs font-bold uppercase text-gray-600 mb-1">Modelo</label>
-                        <input type="text" id="modelo" placeholder="Ex: IDCLASS" required class="w-full p-2 border rounded-lg">
+                        <select id="modelo" required class="w-full p-2 border rounded-lg bg-white">
+                            <option value="">Selecione o Modelo</option>
+                            <option value="IDCLASS">IDCLASS</option>
+                            <option value="IDFACE">IDFACE</option>
+                        </select>
                     </div>
                     <div>
                         <label class="block text-xs font-bold uppercase text-gray-600 mb-1">Data de Entrada</label>

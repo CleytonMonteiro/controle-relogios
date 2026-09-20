@@ -2,14 +2,14 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
 import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
 
-// TODO: Substitua com as credenciais do seu projeto Firebase gratuito
+// Credenciais configuradas do projeto Firebase
 const firebaseConfig = {
-  apiKey: "AIzaSyC-qGBaWyOV2HJ7u3ljrC-rnxsbi3s4DSA", 
-  authDomain: "controle-os-6f169.firebaseapp.com",
-  projectId: "controle-os-6f169",
-  storageBucket: "controle-os-6f169.firebasestorage.app",
-  messagingSenderId: "228838068945",
-  appId: "1:228838068945:web:f30fc3e8e5a9e0c4b0ebf0"
+    apiKey: "AIzaSyC-qGBaWyOV2HJ7u3ljrC-rnxsbi3s4DSA",
+    authDomain: "controle-os-6f169.firebaseapp.com",
+    projectId: "controle-os-6f169",
+    storageBucket: "controle-os-6f169.firebasestorage.app",
+    messagingSenderId: "228838068945",
+    appId: "1:228838068945:web:f30fc3e8e5a9e0c4b0ebf0"
 };
 
 const app = initializeApp(firebaseConfig);
@@ -28,7 +28,7 @@ async function carregarDados() {
         renderizar(listaGlobal);
     } catch (error) {
         console.error("Erro ao carregar dados: ", error);
-        alert("Erro ao conectar com o banco de dados.");
+        alert("Erro ao conectar com o banco de dados. Verifique se as Regras de Segurança do Firestore estão configuradas como 'allow read, write: if true;'.");
     }
 }
 
@@ -47,7 +47,6 @@ function renderizar(dados) {
     }
 
     dados.forEach(item => {
-        // Formata data de AAAA-MM-DD para DD/MM/AAAA se existir
         let dataFormatada = item.dataEntrada;
         if (item.dataEntrada && item.dataEntrada.includes('-')) {
             const partes = item.dataEntrada.split('-');
@@ -64,7 +63,7 @@ function renderizar(dados) {
                 <td class="px-4 py-3 font-medium text-gray-800">${item.empresa || ''}</td>
                 <td class="px-4 py-3">${item.numOs || ''}</td>
                 <td class="px-4 py-3 font-mono text-xs">${item.serial || ''}</td>
-                <td class="px-4 py-3">${item.modelo || ''}</td>
+                <td class="px-4 py-3 font-semibold text-blue-700">${item.modelo || ''}</td>
                 <td class="px-4 py-3">${item.defeito || ''}</td>
                 <td class="px-4 py-3">${dataFormatada || ''}</td>
                 <td class="px-4 py-3">${item.contatos || ''}</td>
@@ -87,7 +86,7 @@ function renderizar(dados) {
                     <span>OS: <strong>${item.numOs || ''}</strong></span>
                     <span>Serial: <strong class="font-mono">${item.serial || ''}</strong></span>
                 </div>
-                <div class="text-sm text-gray-700"><strong>Modelo:</strong> ${item.modelo || ''}</div>
+                <div class="text-sm text-gray-700"><strong>Modelo:</strong> <span class="text-blue-700 font-semibold">${item.modelo || ''}</span></div>
                 <div class="text-sm text-gray-700"><strong>Defeito:</strong> ${item.defeito || ''}</div>
                 <div class="text-sm text-gray-700"><strong>Contato:</strong> ${item.contatos || ''}</div>
                 <div class="text-xs text-gray-400 mt-1 flex justify-between items-center">
@@ -167,10 +166,8 @@ window.salvarOS = async function(event) {
 
     try {
         if (id) {
-            // Atualizar registro existente
             await updateDoc(doc(db, "relogios_os", id), dadosOS);
         } else {
-            // Criar novo registro
             await addDoc(collection(db, "relogios_os"), dadosOS);
         }
         fecharModal();

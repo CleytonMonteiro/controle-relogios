@@ -64,6 +64,8 @@ function renderizar(dados) {
     const tbody = document.getElementById('tabelaCorpo');
     const containerMobile = document.getElementById('cardsMobile');
     
+    if (!tbody || !containerMobile) return;
+
     tbody.innerHTML = '';
     containerMobile.innerHTML = '';
 
@@ -144,8 +146,11 @@ function renderizar(dados) {
 
 // Sistema de Busca e Filtro em tempo real
 window.filtrarDados = function() {
-    const termo = document.getElementById('inputBusca').value.toLowerCase();
-    const statusFiltro = document.getElementById('filtroStatus').value;
+    const termoInput = document.getElementById('inputBusca');
+    const statusSelect = document.getElementById('filtroStatus');
+    
+    const termo = termoInput ? termoInput.value.toLowerCase() : '';
+    const statusFiltro = statusSelect ? statusSelect.value : '';
 
     const filtrados = listaGlobal.filter(item => {
         const textoMatch = (item.empresa && item.empresa.toLowerCase().includes(termo)) ||
@@ -163,49 +168,69 @@ window.filtrarDados = function() {
 
 // Funções de Controle do Modal
 window.abrirModal = function() {
-    document.getElementById('osId').value = '';
-    document.getElementById('formOS').reset();
-    document.getElementById('modalTitulo').innerText = 'Nova Ordem de Serviço';
-    document.getElementById('modalOS').classList.remove('hidden');
+    const osId = document.getElementById('osId');
+    const formOS = document.getElementById('formOS');
+    const modalTitulo = document.getElementById('modalTitulo');
+    const modalOS = document.getElementById('modalOS');
+
+    if (osId) osId.value = '';
+    if (formOS) formOS.reset();
+    if (modalTitulo) modalTitulo.innerText = 'Nova Ordem de Serviço';
+    if (modalOS) modalOS.classList.remove('hidden');
 }
 
 window.fecharModal = function() {
-    document.getElementById('modalOS').classList.add('hidden');
+    const modalOS = document.getElementById('modalOS');
+    if (modalOS) modalOS.classList.add('hidden');
 }
 
 window.editarOS = function(item) {
-    document.getElementById('osId').value = item.id;
-    document.getElementById('empresa').value = item.empresa || '';
-    document.getElementById('contato').value = item.contato || '';
-    document.getElementById('numOs').value = item.numOs || '';
-    document.getElementById('serial').value = item.serial || '';
-    document.getElementById('modelo').value = item.modelo || '';
-    document.getElementById('defeito').value = item.defeito || '';
-    document.getElementById('diagnostico').value = item.diagnostico || '';
-    document.getElementById('dataEntrada').value = item.dataEntrada || '';
-    document.getElementById('status').value = item.status || 'ANDAMENTO';
-    document.getElementById('observacao').value = item.observacao || '';
+    const setVal = (id, val) => {
+        const el = document.getElementById(id);
+        if (el) el.value = val || '';
+    };
 
-    document.getElementById('modalTitulo').innerText = 'Editar Ordem de Serviço';
-    document.getElementById('modalOS').classList.remove('hidden');
+    setVal('osId', item.id);
+    setVal('empresa', item.empresa);
+    setVal('contato', item.contato);
+    setVal('numOs', item.numOs);
+    setVal('serial', item.serial);
+    setVal('modelo', item.modelo);
+    setVal('defeito', item.defeito);
+    setVal('diagnostico', item.diagnostico);
+    setVal('dataEntrada', item.dataEntrada);
+    setVal('status', item.status || 'ANDAMENTO');
+    setVal('observacao', item.observacao);
+
+    const modalTitulo = document.getElementById('modalTitulo');
+    const modalOS = document.getElementById('modalOS');
+
+    if (modalTitulo) modalTitulo.innerText = 'Editar Ordem de Serviço';
+    if (modalOS) modalOS.classList.remove('hidden');
 }
 
-// Salvar ou Atualizar no Firebase
+// Salvar ou Atualizar no Firebase (Versão Segura)
 window.salvarOS = async function(event) {
     event.preventDefault();
-    const id = document.getElementById('osId').value;
+    const osIdEl = document.getElementById('osId');
+    const id = osIdEl ? osIdEl.value : '';
     
+    const getVal = (elementId) => {
+        const el = document.getElementById(elementId);
+        return el ? el.value : '';
+    };
+
     const dadosOS = {
-        empresa: document.getElementById('empresa').value,
-        contato: document.getElementById('contato').value,
-        numOs: document.getElementById('numOs').value,
-        serial: document.getElementById('serial').value,
-        modelo: document.getElementById('modelo').value,
-        defeito: document.getElementById('defeito').value,
-        diagnostico: document.getElementById('diagnostico').value,
-        dataEntrada: document.getElementById('dataEntrada').value,
-        status: document.getElementById('status').value,
-        observacao: document.getElementById('observacao').value
+        empresa: getVal('empresa'),
+        contato: getVal('contato'),
+        numOs: getVal('numOs'),
+        serial: getVal('serial'),
+        modelo: getVal('modelo'),
+        defeito: getVal('defeito'),
+        diagnostico: getVal('diagnostico'),
+        dataEntrada: getVal('dataEntrada'),
+        status: getVal('status'),
+        observacao: getVal('observacao')
     };
 
     try {

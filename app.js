@@ -4,7 +4,8 @@ import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc } 
 
 // TODO: Substitua com as credenciais do seu projeto Firebase gratuito
 const firebaseConfig = {
-  apiKey: "AIzaSyC-qGBaWyOV2HJ7u3ljrC-rnxsbi3s4DSA", authDomain: "controle-os-6f169.firebaseapp.com",
+  apiKey: "AIzaSyC-qGBaWyOV2HJ7u3ljrC-rnxsbi3s4DSA", 
+  authDomain: "controle-os-6f169.firebaseapp.com",
   projectId: "controle-os-6f169",
   storageBucket: "controle-os-6f169.firebasestorage.app",
   messagingSenderId: "228838068945",

@@ -78,17 +78,17 @@ window.mudarAba = function(status) {
     const btnFinalizadas = document.getElementById('btnAbaFinalizadas');
 
     if (status === 'ANDAMENTO') {
-        btnAtivas.className = "flex-1 md:flex-none px-4 py-2 rounded-lg font-semibold text-sm transition bg-blue-600 text-white";
-        btnFinalizadas.className = "flex-1 md:flex-none px-4 py-2 rounded-lg font-semibold text-sm transition bg-gray-200 text-gray-700 hover:bg-gray-300";
+        if (btnAtivas) btnAtivas.className = "flex-1 md:flex-none px-4 py-2 rounded-lg font-semibold text-sm transition bg-blue-600 text-white";
+        if (btnFinalizadas) btnFinalizadas.className = "flex-1 md:flex-none px-4 py-2 rounded-lg font-semibold text-sm transition bg-gray-200 text-gray-700 hover:bg-gray-300";
     } else {
-        btnFinalizadas.className = "flex-1 md:flex-none px-4 py-2 rounded-lg font-semibold text-sm transition bg-green-600 text-white";
-        btnAtivas.className = "flex-1 md:flex-none px-4 py-2 rounded-lg font-semibold text-sm transition bg-gray-200 text-gray-700 hover:bg-gray-300";
+        if (btnFinalizadas) btnFinalizadas.className = "flex-1 md:flex-none px-4 py-2 rounded-lg font-semibold text-sm transition bg-green-600 text-white";
+        if (btnAtivas) btnAtivas.className = "flex-1 md:flex-none px-4 py-2 rounded-lg font-semibold text-sm transition bg-gray-200 text-gray-700 hover:bg-gray-300";
     }
 
     filtrarDados();
 }
 
-// Renderizar na tela (Tabela e Cards responsivos)
+// Renderizar na tela (Tabela para Desktop e Cards para Celular)
 function renderizar(dados) {
     const tbody = document.getElementById('tabelaCorpo');
     const containerMobile = document.getElementById('cardsMobile');
@@ -100,7 +100,7 @@ function renderizar(dados) {
 
     if (dados.length === 0) {
         tbody.innerHTML = `<tr><td colspan="13" class="text-center py-4 text-gray-400">Nenhum registro encontrado nesta visualização.</td></tr>`;
-        containerMobile.innerHTML = `<div class="text-center py-4 text-gray-400 bg-white rounded-lg shadow">Nenhum registro encontrado nesta visualização.</div>`;
+        containerMobile.innerHTML = `<div class="text-center py-4 text-gray-400 bg-white rounded-lg shadow p-4 text-sm">Nenhum registro encontrado nesta visualização.</div>`;
         return;
     }
 
@@ -143,7 +143,8 @@ function renderizar(dados) {
             </tr>
         `;
 
-        // Card para Mobile / Tablet
+        // Card para Mobile / Tablet (Corrigido para respeitar a aba ativa e aceitar o clique)
+        const itemJsonEscapado = JSON.stringify(item).replace(/"/g, '&quot;');
         containerMobile.innerHTML += `
             <div class="bg-white border rounded-lg p-4 shadow-sm flex flex-col gap-2">
                 <div class="flex justify-between items-center">
@@ -164,9 +165,9 @@ function renderizar(dados) {
                     <span>${badgePrazo}</span>
                 </div>
                 <div class="text-xs text-gray-600"><strong>Obs:</strong> ${item.observacao || ''}</div>
-                <div class="flex justify-end space-x-3 pt-2 border-t mt-1">
-                    <button onclick='editarOS(${JSON.stringify(item)})' class="text-blue-600 font-bold">Editar</button>
-                    <button onclick='excluirOS("${item.id}")' class="text-red-600 font-bold">Excluir</button>
+                <div class="flex justify-end space-x-4 pt-2 border-t mt-1">
+                    <button onclick='editarOS(${itemJsonEscapado})' class="text-blue-600 font-bold text-sm px-2 py-1">Editar</button>
+                    <button onclick='excluirOS("${item.id}")' class="text-red-600 font-bold text-sm px-2 py-1">Excluir</button>
                 </div>
             </div>
         `;

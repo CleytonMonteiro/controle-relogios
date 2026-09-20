@@ -12,20 +12,28 @@
     <div class="container mx-auto p-4 max-w-full">
         <!-- Cabeçalho -->
         <header class="flex flex-col md:flex-row justify-between items-center mb-6 bg-white p-4 rounded-lg shadow gap-4">
-            <h1 class="text-2xl font-bold text-gray-800">Controle de Relógios - Assistência</h1>
+            <div>
+                <h1 class="text-2xl font-bold text-gray-800">Controle de Relógios - Assistência</h1>
+                <p class="text-sm text-gray-500 mt-1">OS Ativas em Andamento: <span id="contadorAtivas" class="font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded">0</span></p>
+            </div>
             <button onclick="abrirModal()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition w-full md:w-auto">
                 + Nova OS
             </button>
         </header>
 
-        <!-- Filtros e Busca -->
-        <div class="mb-6 flex flex-col md:flex-row gap-4">
-            <input type="text" id="inputBusca" placeholder="Pesquisar por Empresa, OS, Serial ou Contato..." onkeyup="filtrarDados()" class="p-2 border rounded-lg flex-1 bg-white">
-            <select id="filtroStatus" onchange="filtrarDados()" class="p-2 border rounded-lg bg-white">
-                <option value="">Todos os Status</option>
-                <option value="ANDAMENTO">Em Andamento</option>
-                <option value="FINALIZADO">Finalizado</option>
-            </select>
+        <!-- Abas de Navegação (Ativas vs Finalizadas) e Busca -->
+        <div class="mb-6 flex flex-col md:flex-row justify-between items-center gap-4 bg-white p-4 rounded-lg shadow">
+            <div class="flex gap-2 w-full md:w-auto">
+                <button id="btnAbaAtivas" onclick="mudarAba('ANDAMENTO')" class="flex-1 md:flex-none px-4 py-2 rounded-lg font-semibold text-sm transition bg-blue-600 text-white">
+                    Em Andamento
+                </button>
+                <button id="btnAbaFinalizadas" onclick="mudarAba('FINALIZADO')" class="flex-1 md:flex-none px-4 py-2 rounded-lg font-semibold text-sm transition bg-gray-200 text-gray-700 hover:bg-gray-300">
+                    Histórico Finalizados
+                </button>
+            </div>
+            <div class="w-full md:w-96">
+                <input type="text" id="inputBusca" placeholder="Pesquisar por Empresa, OS, Serial ou Contato..." onkeyup="filtrarDados()" class="w-full p-2 border rounded-lg bg-white text-sm">
+            </div>
         </div>
 
         <!-- Tabela (Visível apenas em Desktop/Tablets largos) -->

@@ -16,6 +16,7 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 let listaGlobal = [];
+let abaAtual = "ANDAMENTO"; // Controla se estamos vendo "ANDAMENTO" ou "FINALIZADO"
 
 // Função auxiliar para contar os dias úteis desde a entrada até hoje (limite de 7 dias úteis)
 function calcularPrazos(dataEntradaStr, status) {
@@ -52,11 +53,39 @@ async function carregarDados() {
         querySnapshot.forEach((docSnap) => {
             listaGlobal.push({ id: docSnap.id, ...docSnap.data() });
         });
-        renderizar(listaGlobal);
+        
+        atualizarContadorAtivas();
+        filtrarDados();
     } catch (error) {
         console.error("Erro ao carregar dados: ", error);
         alert("Erro ao conectar com o banco de dados. Verifique as regras do Firestore.");
     }
+}
+
+// Atualiza o contador no topo com o total de OS ativas em andamento
+function atualizarContadorAtivas() {
+    const ativas = listaGlobal.filter(item => (item.status || 'ANDAMENTO') === 'ANDAMENTO');
+    const contadorEl = document.getElementById('contadorAtivas');
+    if (contadorEl) {
+        contadorEl.innerText = ativas.length;
+    }
+}
+
+// Alternar entre as abas de Andamento e Histórico de Finalizados
+window.mudarAba = function(status) {
+    abaAtual = status;
+    const btnAtivas = document.getElementById('btnAbaAtivas');
+    const btnFinalizadas = document.getElementById('btnAbaFinalizadas');
+
+    if (status === 'ANDAMENTO') {
+        btnAtivas.className = "flex-1 md:flex-none px-4 py-2 rounded-lg font-semibold text-sm transition bg-blue-600 text-white";
+        btnFinalizadas.className = "flex-1 md:flex-none px-4 py-2 rounded-lg font-semibold text-sm transition bg-gray-200 text-gray-700 hover:bg-gray-300";
+    } else {
+        btnFinalizadas.className = "flex-1 md:flex-none px-4 py-2 rounded-lg font-semibold text-sm transition bg-green-600 text-white";
+        btnAtivas.className = "flex-1 md:flex-none px-4 py-2 rounded-lg font-semibold text-sm transition bg-gray-200 text-gray-700 hover:bg-gray-300";
+    }
+
+    filtrarDados();
 }
 
 // Renderizar na tela (Tabela e Cards responsivos)
@@ -70,8 +99,8 @@ function renderizar(dados) {
     containerMobile.innerHTML = '';
 
     if (dados.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="13" class="text-center py-4 text-gray-400">Nenhum registro encontrado.</td></tr>`;
-        containerMobile.innerHTML = `<div class="text-center py-4 text-gray-400 bg-white rounded-lg shadow">Nenhum registro encontrado.</div>`;
+        tbody.innerHTML = `<tr><td colspan="13" class="text-center py-4 text-gray-400">Nenhum registro encontrado nesta visualização.</td></tr>`;
+        containerMobile.innerHTML = `<div class="text-center py-4 text-gray-400 bg-white rounded-lg shadow">Nenhum registro encontrado nesta visualização.</div>`;
         return;
     }
 
@@ -144,23 +173,22 @@ function renderizar(dados) {
     });
 }
 
-// Sistema de Busca e Filtro em tempo real
+// Sistema de Busca filtrando pela aba ativa atual
 window.filtrarDados = function() {
     const termoInput = document.getElementById('inputBusca');
-    const statusSelect = document.getElementById('filtroStatus');
-    
     const termo = termoInput ? termoInput.value.toLowerCase() : '';
-    const statusFiltro = statusSelect ? statusSelect.value : '';
 
     const filtrados = listaGlobal.filter(item => {
+        const statusItem = item.status || 'ANDAMENTO';
+        // Filtra estritamente pela aba que está aberta (ANDAMENTO ou FINALIZADO)
+        const abaMatch = statusItem === abaAtual;
+
         const textoMatch = (item.empresa && item.empresa.toLowerCase().includes(termo)) ||
                            (item.numOs && item.numOs.toLowerCase().includes(termo)) ||
                            (item.serial && item.serial.toLowerCase().includes(termo)) ||
                            (item.contato && item.contato.toLowerCase().includes(termo));
-        
-        const statusMatch = statusFiltro === "" || item.status === statusFiltro;
 
-        return textoMatch && statusMatch;
+        return abaMatch && textoMatch;
     });
 
     renderizar(filtrados);
@@ -209,7 +237,7 @@ window.editarOS = function(item) {
     if (modalOS) modalOS.classList.remove('hidden');
 }
 
-// Salvar ou Atualizar no Firebase (Versão Segura)
+// Salvar ou Atualizar no Firebase
 window.salvarOS = async function(event) {
     event.preventDefault();
     const osIdEl = document.getElementById('osId');

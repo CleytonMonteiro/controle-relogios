@@ -17,7 +17,7 @@ const db = getFirestore(app);
 
 let listaGlobal = [];
 
-// Função auxiliar para calcular dias úteis (ignorando fins de semana) e verificar prazo de 7 dias úteis
+// Função auxiliar para contar os dias úteis desde a entrada até hoje (limite de 7 dias úteis)
 function calcularPrazos(dataEntradaStr, status) {
     if (!dataEntradaStr) return { diasPassados: 0, statusPrazo: "No Prazo" };
 
@@ -28,9 +28,9 @@ function calcularPrazos(dataEntradaStr, status) {
 
     if (dataEntrada > hoje) return { diasPassados: 0, statusPrazo: "No Prazo" };
 
-    // Conta dias úteis passados desde a entrada até hoje
     let diasUteis = 0;
     let atual = new Date(dataEntrada);
+    
     while (atual < hoje) {
         atual.setDate(atual.getDate() + 1);
         const diaSemana = atual.getDay();
@@ -39,12 +39,9 @@ function calcularPrazos(dataEntradaStr, status) {
         }
     }
 
-    // Se estiver finalizado, podemos fixar ou calcular com base no momento. Aqui mantemos a lógica de referência.
-    // Prazo padrão estipulado em 7 dias úteis
     let statusPrazo = diasUteis > 7 ? "Vencido" : "No Prazo";
-    let diasApos7 = diasUteis > 7 ? diasUteis - 7 : 0;
 
-    return { diasPassados: diasApos7, statusPrazo };
+    return { diasPassados: diasUteis, statusPrazo };
 }
 
 // Função para buscar dados do Firebase
@@ -93,7 +90,7 @@ function renderizar(dados) {
             ? '<span class="px-2 py-1 rounded text-xs font-semibold bg-green-100 text-green-800">Finalizado</span>' 
             : '<span class="px-2 py-1 rounded text-xs font-semibold bg-yellow-100 text-yellow-800">Andamento</span>';
 
-        // Linha para Desktop (Ordem exata solicitada)
+        // Linha para Desktop
         tbody.innerHTML += `
             <tr class="hover:bg-gray-50 transition">
                 <td class="px-3 py-3 font-medium text-gray-800">${item.empresa || ''}</td>
@@ -132,7 +129,7 @@ function renderizar(dados) {
                 <div class="text-sm text-gray-700"><strong>Diagnóstico:</strong> ${item.diagnostico || ''}</div>
                 <div class="flex justify-between items-center text-xs bg-gray-50 p-2 rounded">
                     <span>Entrada: ${dataFormatada || ''}</span>
-                    <span>Dias úteis após 7d: <strong>${diasPassados}</strong></span>
+                    <span>Dias Úteis: <strong>${diasPassados}</strong></span>
                     <span>${badgePrazo}</span>
                 </div>
                 <div class="text-xs text-gray-600"><strong>Obs:</strong> ${item.observacao || ''}</div>

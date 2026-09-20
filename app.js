@@ -17,6 +17,36 @@ const db = getFirestore(app);
 
 let listaGlobal = [];
 
+// Função auxiliar para calcular dias úteis (ignorando fins de semana) e verificar prazo de 7 dias úteis
+function calcularPrazos(dataEntradaStr, status) {
+    if (!dataEntradaStr) return { diasPassados: 0, statusPrazo: "No Prazo" };
+
+    const partes = dataEntradaStr.split('-');
+    const dataEntrada = new Date(partes[0], partes[1] - 1, partes[2]);
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+
+    if (dataEntrada > hoje) return { diasPassados: 0, statusPrazo: "No Prazo" };
+
+    // Conta dias úteis passados desde a entrada até hoje
+    let diasUteis = 0;
+    let atual = new Date(dataEntrada);
+    while (atual < hoje) {
+        atual.setDate(atual.getDate() + 1);
+        const diaSemana = atual.getDay();
+        if (diaSemana !== 0 && diaSemana !== 6) { // 0 = Domingo, 6 = Sábado
+            diasUteis++;
+        }
+    }
+
+    // Se estiver finalizado, podemos fixar ou calcular com base no momento. Aqui mantemos a lógica de referência.
+    // Prazo padrão estipulado em 7 dias úteis
+    let statusPrazo = diasUteis > 7 ? "Vencido" : "No Prazo";
+    let diasApos7 = diasUteis > 7 ? diasUteis - 7 : 0;
+
+    return { diasPassados: diasApos7, statusPrazo };
+}
+
 // Função para buscar dados do Firebase
 async function carregarDados() {
     try {
@@ -28,7 +58,7 @@ async function carregarDados() {
         renderizar(listaGlobal);
     } catch (error) {
         console.error("Erro ao carregar dados: ", error);
-        alert("Erro ao conectar com o banco de dados. Verifique se as Regras de Segurança do Firestore estão configuradas como 'allow read, write: if true;'.");
+        alert("Erro ao conectar com o banco de dados. Verifique as regras do Firestore.");
     }
 }
 
@@ -41,7 +71,7 @@ function renderizar(dados) {
     containerMobile.innerHTML = '';
 
     if (dados.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="9" class="text-center py-4 text-gray-400">Nenhum registro encontrado.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="13" class="text-center py-4 text-gray-400">Nenhum registro encontrado.</td></tr>`;
         containerMobile.innerHTML = `<div class="text-center py-4 text-gray-400 bg-white rounded-lg shadow">Nenhum registro encontrado.</div>`;
         return;
     }
@@ -53,24 +83,34 @@ function renderizar(dados) {
             dataFormatada = `${partes[2]}/${partes[1]}/${partes[0]}`;
         }
 
+        const { diasPassados, statusPrazo } = calcularPrazos(item.dataEntrada, item.status);
+
+        const badgePrazo = statusPrazo === 'Vencido'
+            ? '<span class="px-2 py-1 rounded text-xs font-semibold bg-red-100 text-red-800">Vencido</span>'
+            : '<span class="px-2 py-1 rounded text-xs font-semibold bg-green-100 text-green-800">No Prazo</span>';
+
         const badgeStatus = item.status === 'FINALIZADO' 
             ? '<span class="px-2 py-1 rounded text-xs font-semibold bg-green-100 text-green-800">Finalizado</span>' 
-            : '<span class="px-2 py-1 rounded text-xs font-semibold bg-yellow-100 text-yellow-800">Em Andamento</span>';
+            : '<span class="px-2 py-1 rounded text-xs font-semibold bg-yellow-100 text-yellow-800">Andamento</span>';
 
-        // Linha para Desktop
+        // Linha para Desktop (Ordem exata solicitada)
         tbody.innerHTML += `
             <tr class="hover:bg-gray-50 transition">
-                <td class="px-4 py-3 font-medium text-gray-800">${item.empresa || ''}</td>
-                <td class="px-4 py-3">${item.numOs || ''}</td>
-                <td class="px-4 py-3 font-mono text-xs">${item.serial || ''}</td>
-                <td class="px-4 py-3 font-semibold text-blue-700">${item.modelo || ''}</td>
-                <td class="px-4 py-3">${item.defeito || ''}</td>
-                <td class="px-4 py-3">${dataFormatada || ''}</td>
-                <td class="px-4 py-3">${item.contatos || ''}</td>
-                <td class="px-4 py-3">${badgeStatus}</td>
-                <td class="px-4 py-3 text-center space-x-2">
-                    <button onclick='editarOS(${JSON.stringify(item)})' class="text-blue-600 hover:text-blue-900 text-xs font-bold">Editar</button>
-                    <button onclick='excluirOS("${item.id}")' class="text-red-600 hover:text-red-900 text-xs font-bold">Excluir</button>
+                <td class="px-3 py-3 font-medium text-gray-800">${item.empresa || ''}</td>
+                <td class="px-3 py-3 text-gray-600">${item.contato || ''}</td>
+                <td class="px-3 py-3">${item.numOs || ''}</td>
+                <td class="px-3 py-3 font-mono">${item.serial || ''}</td>
+                <td class="px-3 py-3 font-semibold text-blue-700">${item.modelo || ''}</td>
+                <td class="px-3 py-3">${item.defeito || ''}</td>
+                <td class="px-3 py-3">${item.diagnostico || ''}</td>
+                <td class="px-3 py-3">${dataFormatada || ''}</td>
+                <td class="px-3 py-3 text-center font-bold">${diasPassados}</td>
+                <td class="px-3 py-3 text-center">${badgePrazo}</td>
+                <td class="px-3 py-3 text-center">${badgeStatus}</td>
+                <td class="px-3 py-3">${item.observacao || ''}</td>
+                <td class="px-3 py-3 text-center space-x-2">
+                    <button onclick='editarOS(${JSON.stringify(item)})' class="text-blue-600 hover:text-blue-900 font-bold">Editar</button>
+                    <button onclick='excluirOS("${item.id}")' class="text-red-600 hover:text-red-900 font-bold">Excluir</button>
                 </td>
             </tr>
         `;
@@ -82,19 +122,23 @@ function renderizar(dados) {
                     <span class="font-bold text-gray-800 text-base">${item.empresa || ''}</span>
                     <div>${badgeStatus}</div>
                 </div>
+                <div class="text-xs text-gray-500"><strong>Contato:</strong> ${item.contato || 'Não informado'}</div>
                 <div class="text-xs text-gray-500 flex justify-between">
                     <span>OS: <strong>${item.numOs || ''}</strong></span>
                     <span>Serial: <strong class="font-mono">${item.serial || ''}</strong></span>
                 </div>
                 <div class="text-sm text-gray-700"><strong>Modelo:</strong> <span class="text-blue-700 font-semibold">${item.modelo || ''}</span></div>
                 <div class="text-sm text-gray-700"><strong>Defeito:</strong> ${item.defeito || ''}</div>
-                <div class="text-sm text-gray-700"><strong>Contato:</strong> ${item.contatos || ''}</div>
-                <div class="text-xs text-gray-400 mt-1 flex justify-between items-center">
+                <div class="text-sm text-gray-700"><strong>Diagnóstico:</strong> ${item.diagnostico || ''}</div>
+                <div class="flex justify-between items-center text-xs bg-gray-50 p-2 rounded">
                     <span>Entrada: ${dataFormatada || ''}</span>
-                    <div class="space-x-3">
-                        <button onclick='editarOS(${JSON.stringify(item)})' class="text-blue-600 font-bold">Editar</button>
-                        <button onclick='excluirOS("${item.id}")' class="text-red-600 font-bold">Excluir</button>
-                    </div>
+                    <span>Dias úteis após 7d: <strong>${diasPassados}</strong></span>
+                    <span>${badgePrazo}</span>
+                </div>
+                <div class="text-xs text-gray-600"><strong>Obs:</strong> ${item.observacao || ''}</div>
+                <div class="flex justify-end space-x-3 pt-2 border-t mt-1">
+                    <button onclick='editarOS(${JSON.stringify(item)})' class="text-blue-600 font-bold">Editar</button>
+                    <button onclick='excluirOS("${item.id}")' class="text-red-600 font-bold">Excluir</button>
                 </div>
             </div>
         `;
@@ -109,7 +153,8 @@ window.filtrarDados = function() {
     const filtrados = listaGlobal.filter(item => {
         const textoMatch = (item.empresa && item.empresa.toLowerCase().includes(termo)) ||
                            (item.numOs && item.numOs.toLowerCase().includes(termo)) ||
-                           (item.serial && item.serial.toLowerCase().includes(termo));
+                           (item.serial && item.serial.toLowerCase().includes(termo)) ||
+                           (item.contato && item.contato.toLowerCase().includes(termo));
         
         const statusMatch = statusFiltro === "" || item.status === statusFiltro;
 
@@ -134,12 +179,13 @@ window.fecharModal = function() {
 window.editarOS = function(item) {
     document.getElementById('osId').value = item.id;
     document.getElementById('empresa').value = item.empresa || '';
+    document.getElementById('contato').value = item.contato || '';
     document.getElementById('numOs').value = item.numOs || '';
     document.getElementById('serial').value = item.serial || '';
     document.getElementById('modelo').value = item.modelo || '';
-    document.getElementById('dataEntrada').value = item.dataEntrada || '';
     document.getElementById('defeito').value = item.defeito || '';
-    document.getElementById('contatos').value = item.contatos || '';
+    document.getElementById('diagnostico').value = item.diagnostico || '';
+    document.getElementById('dataEntrada').value = item.dataEntrada || '';
     document.getElementById('status').value = item.status || 'ANDAMENTO';
     document.getElementById('observacao').value = item.observacao || '';
 
@@ -154,12 +200,13 @@ window.salvarOS = async function(event) {
     
     const dadosOS = {
         empresa: document.getElementById('empresa').value,
+        contato: document.getElementById('contato').value,
         numOs: document.getElementById('numOs').value,
         serial: document.getElementById('serial').value,
         modelo: document.getElementById('modelo').value,
-        dataEntrada: document.getElementById('dataEntrada').value,
         defeito: document.getElementById('defeito').value,
-        contatos: document.getElementById('contatos').value,
+        diagnostico: document.getElementById('diagnostico').value,
+        dataEntrada: document.getElementById('dataEntrada').value,
         status: document.getElementById('status').value,
         observacao: document.getElementById('observacao').value
     };

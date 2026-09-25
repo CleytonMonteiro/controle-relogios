@@ -16,9 +16,9 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 let listaGlobal = [];
-let abaAtual = "ANDAMENTO"; // Controla se estamos vendo "ANDAMENTO" ou "FINALIZADO"
+let abaAtual = "ANDAMENTO"; // Pode ser "ANDAMENTO", "AGUARDANDO", "ENVIADO" ou "FINALIZADO"
 
-// Função auxiliar para contar os dias úteis desde a entrada até hoje (limite de 7 dias úteis)
+// Função auxiliar para calcular dias úteis (pausa se o status for AGUARDANDO ou ENVIADO)
 function calcularPrazos(dataEntradaStr, status) {
     if (!dataEntradaStr) return { diasPassados: 0, statusPrazo: "No Prazo" };
 
@@ -35,13 +35,12 @@ function calcularPrazos(dataEntradaStr, status) {
     while (atual < hoje) {
         atual.setDate(atual.getDate() + 1);
         const diaSemana = atual.getDay();
-        if (diaSemana !== 0 && diaSemana !== 6) { // 0 = Domingo, 6 = Sábado
+        if (diaSemana !== 0 && diaSemana !== 6) {
             diasUteis++;
         }
     }
 
     let statusPrazo = diasUteis > 7 ? "Vencido" : "No Prazo";
-
     return { diasPassados: diasUteis, statusPrazo };
 }
 
@@ -54,16 +53,16 @@ async function carregarDados() {
             listaGlobal.push({ id: docSnap.id, ...docSnap.data() });
         });
         
-        atualizarContadorAtivas();
+        atualizarContadores();
         filtrarDados();
     } catch (error) {
         console.error("Erro ao carregar dados: ", error);
-        alert("Erro ao conectar com o banco de dados. Verifique as regras do Firestore.");
+        alert("Erro ao conectar com o banco de dados.");
     }
 }
 
-// Atualiza o contador no topo com o total de OS ativas em andamento
-function atualizarContadorAtivas() {
+// Atualiza o contador de OS ativas em andamento no topo
+function atualizarContadores() {
     const ativas = listaGlobal.filter(item => (item.status || 'ANDAMENTO') === 'ANDAMENTO');
     const contadorEl = document.getElementById('contadorAtivas');
     if (contadorEl) {
@@ -71,18 +70,28 @@ function atualizarContadorAtivas() {
     }
 }
 
-// Alternar entre as abas de Andamento e Histórico de Finalizados
+// Alternar entre as abas de visualização
 window.mudarAba = function(status) {
     abaAtual = status;
     const btnAtivas = document.getElementById('btnAbaAtivas');
+    const btnAguardando = document.getElementById('btnAbaAguardando');
+    const btnEnviado = document.getElementById('btnAbaEnviado');
     const btnFinalizadas = document.getElementById('btnAbaFinalizadas');
 
-    if (status === 'ANDAMENTO') {
-        if (btnAtivas) btnAtivas.className = "flex-1 md:flex-none px-4 py-2 rounded-lg font-semibold text-sm transition bg-blue-600 text-white";
-        if (btnFinalizadas) btnFinalizadas.className = "flex-1 md:flex-none px-4 py-2 rounded-lg font-semibold text-sm transition bg-gray-200 text-gray-700 hover:bg-gray-300";
-    } else {
-        if (btnFinalizadas) btnFinalizadas.className = "flex-1 md:flex-none px-4 py-2 rounded-lg font-semibold text-sm transition bg-green-600 text-white";
-        if (btnAtivas) btnAtivas.className = "flex-1 md:flex-none px-4 py-2 rounded-lg font-semibold text-sm transition bg-gray-200 text-gray-700 hover:bg-gray-300";
+    const resetClass = "flex-1 md:flex-none px-3 py-2 rounded-lg font-semibold text-sm transition bg-gray-200 text-gray-700 hover:bg-gray-300 whitespace-nowrap";
+    if (btnAtivas) btnAtivas.className = resetClass;
+    if (btnAguardando) btnAguardando.className = resetClass;
+    if (btnEnviado) btnEnviado.className = resetClass;
+    if (btnFinalizadas) btnFinalizadas.className = resetClass;
+
+    if (status === 'ANDAMENTO' && btnAtivas) {
+        btnAtivas.className = "flex-1 md:flex-none px-3 py-2 rounded-lg font-semibold text-sm transition bg-blue-600 text-white whitespace-nowrap";
+    } else if (status === 'AGUARDANDO' && btnAguardando) {
+        btnAguardando.className = "flex-1 md:flex-none px-3 py-2 rounded-lg font-semibold text-sm transition bg-amber-500 text-white whitespace-nowrap";
+    } else if (status === 'ENVIADO' && btnEnviado) {
+        btnEnviado.className = "flex-1 md:flex-none px-3 py-2 rounded-lg font-semibold text-sm transition bg-purple-600 text-white whitespace-nowrap";
+    } else if (status === 'FINALIZADO' && btnFinalizadas) {
+        btnFinalizadas.className = "flex-1 md:flex-none px-3 py-2 rounded-lg font-semibold text-sm transition bg-green-600 text-white whitespace-nowrap";
     }
 
     filtrarDados();
@@ -112,18 +121,26 @@ function renderizar(dados) {
         }
 
         const { diasPassados, statusPrazo } = calcularPrazos(item.dataEntrada, item.status);
+        const statusAtual = item.status || 'ANDAMENTO';
 
         const badgePrazo = statusPrazo === 'Vencido'
             ? '<span class="px-2 py-1 rounded text-xs font-semibold bg-red-100 text-red-800">Vencido</span>'
             : '<span class="px-2 py-1 rounded text-xs font-semibold bg-green-100 text-green-800">No Prazo</span>';
 
-        const badgeStatus = item.status === 'FINALIZADO' 
-            ? '<span class="px-2 py-1 rounded text-xs font-semibold bg-green-100 text-green-800">Finalizado</span>' 
-            : '<span class="px-2 py-1 rounded text-xs font-semibold bg-yellow-100 text-yellow-800">Andamento</span>';
+        let badgeStatus = '<span class="px-2 py-1 rounded text-xs font-semibold bg-yellow-100 text-yellow-800">Andamento</span>';
+        if (statusAtual === 'AGUARDANDO') {
+            badgeStatus = '<span class="px-2 py-1 rounded text-xs font-semibold bg-amber-100 text-amber-800">Aguardando</span>';
+        } else if (statusAtual === 'ENVIADO') {
+            badgeStatus = '<span class="px-2 py-1 rounded text-xs font-semibold bg-purple-100 text-purple-800">Enviado</span>';
+        } else if (statusAtual === 'FINALIZADO') {
+            badgeStatus = '<span class="px-2 py-1 rounded text-xs font-semibold bg-green-100 text-green-800">Finalizado</span>';
+        }
+
+        const linhaVencidaClass = (statusPrazo === 'Vencido' && statusAtual === 'ANDAMENTO') ? 'bg-red-50 hover:bg-red-100' : 'hover:bg-gray-50';
 
         // Linha para Desktop
         tbody.innerHTML += `
-            <tr class="hover:bg-gray-50 transition">
+            <tr class="${linhaVencidaClass} transition">
                 <td class="px-3 py-3 font-medium text-gray-800">${item.empresa || ''}</td>
                 <td class="px-3 py-3 text-gray-600">${item.contato || ''}</td>
                 <td class="px-3 py-3">${item.numOs || ''}</td>
@@ -143,10 +160,12 @@ function renderizar(dados) {
             </tr>
         `;
 
-        // Card para Mobile / Tablet (Corrigido para respeitar a aba ativa e aceitar o clique)
-        const itemJsonEscapado = JSON.stringify(item).replace(/"/g, '&quot;');
+        // Card para Mobile / Tablet
+        const cardVencidoClass = (statusPrazo === 'Vencido' && statusAtual === 'ANDAMENTO') ? 'bg-red-50 border-red-200' : 'bg-white border';
+        const itemJsonEscapado = JSON.stringify(item).replace(/'/g, "&#39;").replace(/"/g, '&quot;');
+        
         containerMobile.innerHTML += `
-            <div class="bg-white border rounded-lg p-4 shadow-sm flex flex-col gap-2">
+            <div class="${cardVencidoClass} rounded-lg p-4 shadow-sm flex flex-col gap-2">
                 <div class="flex justify-between items-center">
                     <span class="font-bold text-gray-800 text-base">${item.empresa || ''}</span>
                     <div>${badgeStatus}</div>
@@ -159,7 +178,7 @@ function renderizar(dados) {
                 <div class="text-sm text-gray-700"><strong>Modelo:</strong> <span class="text-blue-700 font-semibold">${item.modelo || ''}</span></div>
                 <div class="text-sm text-gray-700"><strong>Defeito:</strong> ${item.defeito || ''}</div>
                 <div class="text-sm text-gray-700"><strong>Diagnóstico:</strong> ${item.diagnostico || ''}</div>
-                <div class="flex justify-between items-center text-xs bg-gray-50 p-2 rounded">
+                <div class="flex justify-between items-center text-xs bg-gray-100 p-2 rounded">
                     <span>Entrada: ${dataFormatada || ''}</span>
                     <span>Dias Úteis: <strong>${diasPassados}</strong></span>
                     <span>${badgePrazo}</span>
@@ -181,7 +200,6 @@ window.filtrarDados = function() {
 
     const filtrados = listaGlobal.filter(item => {
         const statusItem = item.status || 'ANDAMENTO';
-        // Filtra estritamente pela aba que está aberta (ANDAMENTO ou FINALIZADO)
         const abaMatch = statusItem === abaAtual;
 
         const textoMatch = (item.empresa && item.empresa.toLowerCase().includes(termo)) ||

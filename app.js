@@ -61,13 +61,19 @@ async function carregarDados() {
     }
 }
 
-// Atualiza o contador de OS ativas em andamento no topo
+// Atualiza os contadores no topo com os totais de cada status
 function atualizarContadores() {
     const ativas = listaGlobal.filter(item => (item.status || 'ANDAMENTO') === 'ANDAMENTO');
-    const contadorEl = document.getElementById('contadorAtivas');
-    if (contadorEl) {
-        contadorEl.innerText = ativas.length;
-    }
+    const aguardando = listaGlobal.filter(item => item.status === 'AGUARDANDO');
+    const enviados = listaGlobal.filter(item => item.status === 'ENVIADO');
+
+    const contadorAtivasEl = document.getElementById('contadorAtivas');
+    const contadorAguardandoEl = document.getElementById('contadorAguardando');
+    const contadorEnviadosEl = document.getElementById('contadorEnviados');
+
+    if (contadorAtivasEl) contadorAtivasEl.innerText = ativas.length;
+    if (contadorAguardandoEl) contadorAguardandoEl.innerText = aguardando.length;
+    if (contadorEnviadosEl) contadorEnviadosEl.innerText = enviados.length;
 }
 
 // Alternar entre as abas de visualização
@@ -138,7 +144,7 @@ function renderizar(dados) {
 
         const linhaVencidaClass = (statusPrazo === 'Vencido' && statusAtual === 'ANDAMENTO') ? 'bg-red-50 hover:bg-red-100' : 'hover:bg-gray-50';
 
-        // Linha para Desktop
+        // Linha para Desktop (Usando editarOSPorId para evitar conflitos de sintaxe no VS Code)
         tbody.innerHTML += `
             <tr class="${linhaVencidaClass} transition">
                 <td class="px-3 py-3 font-medium text-gray-800">${item.empresa || ''}</td>
@@ -154,7 +160,7 @@ function renderizar(dados) {
                 <td class="px-3 py-3 text-center">${badgeStatus}</td>
                 <td class="px-3 py-3">${item.observacao || ''}</td>
                 <td class="px-3 py-3 text-center space-x-2">
-                    <button onclick='editarOS(${JSON.stringify(item)})' class="text-blue-600 hover:text-blue-900 font-bold">Editar</button>
+                    <button onclick='editarOSPorId("${item.id}")' class="text-blue-600 hover:text-blue-900 font-bold">Editar</button>
                     <button onclick='excluirOS("${item.id}")' class="text-red-600 hover:text-red-900 font-bold">Excluir</button>
                 </td>
             </tr>
@@ -162,7 +168,6 @@ function renderizar(dados) {
 
         // Card para Mobile / Tablet
         const cardVencidoClass = (statusPrazo === 'Vencido' && statusAtual === 'ANDAMENTO') ? 'bg-red-50 border-red-200' : 'bg-white border';
-        const itemJsonEscapado = JSON.stringify(item).replace(/'/g, "&#39;").replace(/"/g, '&quot;');
         
         containerMobile.innerHTML += `
             <div class="${cardVencidoClass} rounded-lg p-4 shadow-sm flex flex-col gap-2">
@@ -185,7 +190,7 @@ function renderizar(dados) {
                 </div>
                 <div class="text-xs text-gray-600"><strong>Obs:</strong> ${item.observacao || ''}</div>
                 <div class="flex justify-end space-x-4 pt-2 border-t mt-1">
-                    <button onclick='editarOS(${itemJsonEscapado})' class="text-blue-600 font-bold text-sm px-2 py-1">Editar</button>
+                    <button onclick='editarOSPorId("${item.id}")' class="text-blue-600 font-bold text-sm px-2 py-1">Editar</button>
                     <button onclick='excluirOS("${item.id}")' class="text-red-600 font-bold text-sm px-2 py-1">Excluir</button>
                 </div>
             </div>
@@ -254,6 +259,14 @@ window.editarOS = function(item) {
 
     if (modalTitulo) modalTitulo.innerText = 'Editar Ordem de Serviço';
     if (modalOS) modalOS.classList.remove('hidden');
+}
+
+// Função auxiliar para buscar o item pelo ID e abrir o modal de edição (evita conflitos de aspas no HTML)
+window.editarOSPorId = function(id) {
+    const item = listaGlobal.find(i => i.id === id);
+    if (item) {
+        window.editarOS(item);
+    }
 }
 
 // Salvar ou Atualizar no Firebase

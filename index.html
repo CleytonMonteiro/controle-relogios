@@ -177,6 +177,22 @@
         </div>
     </div>
 
+    <!-- Modal de Histórico do Aparelho (Linha do Tempo) -->
+    <div id="modalHistorico" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-xl max-w-2xl w-full p-6 shadow-2xl max-h-[90vh] overflow-y-auto border-t-4 border-purple-600">
+            <div class="flex justify-between items-center mb-4 pb-2 border-b">
+                <h2 class="text-xl font-bold text-gray-800">Histórico do Aparelho (Linha do Tempo)</h2>
+                <button onclick="fecharModalHistorico()" class="text-gray-500 hover:text-gray-800 font-bold text-lg px-2">✕</button>
+            </div>
+            <div id="conteudoHistorico" class="space-y-4">
+                <!-- Preenchido via JS -->
+            </div>
+            <div class="flex justify-end pt-4 border-t mt-4">
+                <button type="button" onclick="fecharModalHistorico()" class="px-5 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium text-sm transition">Fechar</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Div para estruturar a Etiqueta de Impressão de Bancada -->
     <div id="etiquetaImpressao" style="display:none;"></div>
 

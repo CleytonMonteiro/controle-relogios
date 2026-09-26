@@ -216,7 +216,7 @@ function renderizar(dados) {
                     <td class="px-3 py-3 font-medium">${item.empresa || ''}</td>
                     <td class="px-3 py-3">${item.contato || ''}</td>
                     <td class="px-3 py-3 font-bold text-blue-800">${item.numOs || ''}</td>
-                    <td class="px-3 py-3 font-mono">${item.serial || ''}</td>
+                    <td class="px-3 py-3 font-mono cursor-pointer text-purple-700 underline" title="Ver Histórico do Aparelho" onclick='verHistoricoPorSerial("${item.serial}")'>${item.serial || ''}</td>
                     <td class="px-3 py-3 font-semibold text-blue-700">${item.modelo || ''}</td>
                     <td class="px-3 py-3">${item.defeito || ''}</td>
                     <td class="px-3 py-3">${item.diagnostico || ''}</td>
@@ -225,7 +225,8 @@ function renderizar(dados) {
                     <td class="px-3 py-3 text-center">${badgePrazo}</td>
                     <td class="px-3 py-3 text-center">${badgeStatus}</td>
                     <td class="px-3 py-3">${item.observacao || ''}</td>
-                    <td class="px-3 py-3 text-center space-x-2 whitespace-nowrap">
+                    <td class="px-3 py-3 text-center space-x-1.5 whitespace-nowrap">
+                        <button onclick='verHistoricoPorSerial("${item.serial}")' class="text-purple-700 hover:text-purple-900 font-bold bg-purple-50 px-2 py-1 rounded border border-purple-200" title="Histórico">Histórico</button>
                         <button onclick='imprimirEtiquetaPorId("${item.id}")' class="text-amber-600 hover:text-amber-900 font-bold bg-amber-50 px-2 py-1 rounded border border-amber-200">Imprimir</button>
                         <button onclick='editarOSPorId("${item.id}")' class="text-blue-600 hover:text-blue-900 font-bold">Editar</button>
                         <button onclick='excluirOS("${item.id}")' class="text-red-600 hover:text-red-900 font-bold">Excluir</button>
@@ -238,14 +239,15 @@ function renderizar(dados) {
                     <td class="px-3 py-3 font-medium">${item.empresa || ''}</td>
                     <td class="px-3 py-3">${item.contato || ''}</td>
                     <td class="px-3 py-3 font-bold text-blue-800">${item.numOs || ''}</td>
-                    <td class="px-3 py-3 font-mono">${item.serial || ''}</td>
+                    <td class="px-3 py-3 font-mono cursor-pointer text-purple-700 underline" title="Ver Histórico do Aparelho" onclick='verHistoricoPorSerial("${item.serial}")'>${item.serial || ''}</td>
                     <td class="px-3 py-3 font-semibold text-blue-700">${item.modelo || ''}</td>
                     <td class="px-3 py-3">${item.defeito || ''}</td>
                     <td class="px-3 py-3">${item.diagnostico || ''}</td>
                     <td class="px-3 py-3">${dataFormatada || ''}</td>
                     <td class="px-3 py-3 text-center">${badgeStatus}</td>
                     <td class="px-3 py-3">${item.observacao || ''}</td>
-                    <td class="px-3 py-3 text-center space-x-2 whitespace-nowrap">
+                    <td class="px-3 py-3 text-center space-x-1.5 whitespace-nowrap">
+                        <button onclick='verHistoricoPorSerial("${item.serial}")' class="text-purple-700 hover:text-purple-900 font-bold bg-purple-50 px-2 py-1 rounded border border-purple-200" title="Histórico">Histórico</button>
                         <button onclick='imprimirEtiquetaPorId("${item.id}")' class="text-amber-600 hover:text-amber-900 font-bold bg-amber-50 px-2 py-1 rounded border border-amber-200">Imprimir</button>
                         <button onclick='editarOSPorId("${item.id}")' class="text-blue-600 hover:text-blue-900 font-bold">Editar</button>
                         <button onclick='excluirOS("${item.id}")' class="text-red-600 hover:text-red-900 font-bold">Excluir</button>
@@ -277,14 +279,15 @@ function renderizar(dados) {
                 <div class="text-xs text-gray-600"><strong>Contato:</strong> ${item.contato || 'Não informado'}</div>
                 <div class="text-xs text-gray-600 flex justify-between">
                     <span>OS: <strong class="text-blue-800">${item.numOs || ''}</strong></span>
-                    <span>Serial: <strong class="font-mono">${item.serial || ''}</strong></span>
+                    <span>Serial: <strong class="font-mono text-purple-700 cursor-pointer underline" onclick='verHistoricoPorSerial("${item.serial}")'>${item.serial || ''}</strong></span>
                 </div>
                 <div class="text-sm text-gray-800"><strong>Modelo:</strong> <span class="text-blue-700 font-semibold">${item.modelo || ''}</span></div>
                 <div class="text-sm text-gray-800"><strong>Defeito:</strong> ${item.defeito || ''}</div>
                 <div class="text-sm text-gray-800"><strong>Diagnóstico:</strong> ${item.diagnostico || ''}</div>
                 ${blocoInfoExtra}
                 <div class="text-xs text-gray-700"><strong>Obs:</strong> ${item.observacao || ''}</div>
-                <div class="flex justify-end space-x-3 pt-2 border-t mt-1">
+                <div class="flex justify-end space-x-2 pt-2 border-t mt-1">
+                    <button onclick='verHistoricoPorSerial("${item.serial}")' class="text-purple-700 font-bold text-xs bg-purple-50 px-2 py-1.5 rounded border border-purple-200">Histórico</button>
                     <button onclick='imprimirEtiquetaPorId("${item.id}")' class="text-amber-700 font-bold text-xs bg-amber-50 px-2.5 py-1.5 rounded border border-amber-200">Imprimir</button>
                     <button onclick='editarOSPorId("${item.id}")' class="text-blue-600 font-bold text-sm px-2 py-1">Editar</button>
                     <button onclick='excluirOS("${item.id}")' class="text-red-600 font-bold text-sm px-2 py-1">Excluir</button>
@@ -314,7 +317,7 @@ window.filtrarDados = function() {
     renderizar(filtrados);
 }
 
-// Funções de Controle do Modal
+// Funções de Controle do Modal de OS
 window.abrirModal = function() {
     const osId = document.getElementById('osId');
     const formOS = document.getElementById('formOS');
@@ -362,6 +365,87 @@ window.editarOSPorId = function(id) {
     if (item) {
         window.editarOS(item);
     }
+}
+
+// Função para exibir o Histórico do Aparelho por Serial
+window.verHistoricoPorSerial = function(serialBuscado) {
+    const historicoContainer = document.getElementById('conteudoHistorico');
+    const modalHistorico = document.getElementById('modalHistorico');
+
+    if (!historicoContainer || !modalHistorico) return;
+
+    // Filtra todos os registos na lista global que possuem o mesmo número de série
+    const historicos = listaGlobal.filter(item => item.serial && item.serial.toUpperCase() === serialBuscado.toUpperCase());
+
+    if (historicos.length === 0) {
+        alert("Nenhum histórico encontrado para este serial.");
+        return;
+    }
+
+    // Ordena do mais recente para o mais antigo com base na data de entrada
+    historicos.sort((a, b) => new Date(b.dataEntrada) - new Date(a.dataEntrada));
+
+    let htmlLinhaDoTempo = `
+        <div class="mb-3 p-3 bg-purple-50 rounded-lg border border-purple-200">
+            <span class="text-xs uppercase font-bold text-purple-900">Número de Série do Equipamento:</span>
+            <div class="text-lg font-mono font-bold text-purple-950">${serialBuscado}</div>
+            <div class="text-xs text-purple-700 mt-1">Total de passagens registradas na assistência: <strong>${historicos.length}</strong></div>
+        </div>
+        <div class="space-y-3">
+    `;
+
+    historicos.forEach((h, index) => {
+        let dataFormatada = h.dataEntrada;
+        if (h.dataEntrada && h.dataEntrada.includes('-')) {
+            const partes = h.dataEntrada.split('-');
+            dataFormatada = `${partes[2]}/${partes[1]}/${partes[0]}`;
+        }
+
+        let corStatusBadge = 'bg-yellow-100 text-yellow-800';
+        let nomeStatus = 'Em Andamento';
+        if (h.status === 'AGUARDANDO') {
+            corStatusBadge = 'bg-amber-100 text-amber-800';
+            nomeStatus = 'Aguardando';
+        } else if (h.status === 'ENVIADO') {
+            corStatusBadge = 'bg-purple-100 text-purple-800';
+            nomeStatus = 'Enviado';
+        } else if (h.status === 'FINALIZADO') {
+            corStatusBadge = 'bg-green-100 text-green-800';
+            nomeStatus = 'Finalizado';
+        }
+
+        htmlLinhaDoTempo += `
+            <div class="p-4 rounded-xl border border-gray-200 bg-white shadow-sm flex flex-col gap-2 relative border-l-4 border-l-blue-600">
+                <div class="flex justify-between items-center">
+                    <span class="text-xs font-bold text-gray-500">Atendimento #${historicos.length - index}</span>
+                    <span class="px-2 py-0.5 rounded text-xs font-semibold ${corStatusBadge}">${nomeStatus}</span>
+                </div>
+                <div class="flex justify-between items-center text-sm">
+                    <span>Empresa: <strong>${h.empresa || ''}</strong></span>
+                    <span>OS: <strong class="text-blue-700">${h.numOs || ''}</strong></span>
+                </div>
+                <div class="text-xs text-gray-600">
+                    <strong>Modelo:</strong> ${h.modelo || ''} | <strong>Entrada:</strong> ${dataFormatada}
+                </div>
+                <div class="text-xs text-gray-700 bg-gray-50 p-2 rounded">
+                    <strong>Defeito Relatado:</strong> ${h.defeito || 'Não informado'}
+                </div>
+                <div class="text-xs text-gray-700 bg-blue-50 p-2 rounded">
+                    <strong>Diagnóstico Técnico:</strong> ${h.diagnostico || 'Não informado'}
+                </div>
+                ${h.observacao ? `<div class="text-xs text-gray-500"><strong>Obs:</strong> ${h.observacao}</div>` : ''}
+            </div>
+        `;
+    });
+
+    htmlLinhaDoTempo += `</div>`;
+    historicoContainer.innerHTML = htmlLinhaDoTempo;
+    modalHistorico.classList.remove('hidden');
+}
+
+window.fecharModalHistorico = function() {
+    const modalHistorico = document.getElementById('modalHistorico');
+    if (modalHistorico) modalHistorico.classList.add('hidden');
 }
 
 // Função para imprimir a etiqueta de bancada direto no relógio

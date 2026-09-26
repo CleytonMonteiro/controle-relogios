@@ -1,6 +1,6 @@
 // Importações do Firebase SDK v9 (via CDN)
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
-import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
 
 // Credenciais configuradas do projeto Firebase
 const firebaseConfig = {
@@ -57,10 +57,12 @@ function calcularPrazos(dataEntradaStr, status) {
     return { diasPassados: diasUteis, statusPrazo };
 }
 
-// Função para buscar dados do Firebase
+// Função para buscar dados do Firebase com paginação otimizada
 async function carregarDados() {
     try {
-        const querySnapshot = await getDocs(collection(db, "relogios_os"));
+        const q = query(collection(db, "relogios_os"), orderBy("dataEntrada", "desc"), limit(200));
+        const querySnapshot = await getDocs(q);
+        
         listaGlobal = [];
         querySnapshot.forEach((docSnap) => {
             listaGlobal.push({ id: docSnap.id, ...docSnap.data() });
@@ -70,7 +72,17 @@ async function carregarDados() {
         filtrarDados();
     } catch (error) {
         console.error("Erro ao carregar dados: ", error);
-        alert("Erro ao conectar com o banco de dados.");
+        try {
+            const fallbackSnapshot = await getDocs(collection(db, "relogios_os"));
+            listaGlobal = [];
+            fallbackSnapshot.forEach((docSnap) => {
+                listaGlobal.push({ id: docSnap.id, ...docSnap.data() });
+            });
+            atualizarContadores();
+            filtrarDados();
+        } catch (errFallback) {
+            alert("Erro ao conectar com o banco de dados.");
+        }
     }
 }
 
@@ -116,7 +128,7 @@ window.mudarAba = function(status) {
     filtrarDados();
 }
 
-// Renderizar na tela (Tabela Desktop e Cards Mobile com colunas adaptativas)
+// Renderizar na tela
 function renderizar(dados) {
     const thead = document.getElementById('tabelaCabecalho');
     const tbody = document.getElementById('tabelaCorpo');
@@ -127,7 +139,6 @@ function renderizar(dados) {
     tbody.innerHTML = '';
     containerMobile.innerHTML = '';
 
-    // Se estiver na aba "Em Andamento", exibe as colunas de Dias Úteis e Prazo. Nas outras abas, oculta-as para limpar a tela.
     const exibePrazos = (abaAtual === 'ANDAMENTO');
 
     if (exibePrazos) {
@@ -197,10 +208,8 @@ function renderizar(dados) {
             badgeStatus = '<span class="px-2 py-1 rounded text-xs font-semibold bg-green-100 text-green-800">Finalizado</span>';
         }
 
-        // Se estiver vencido, a linha inteira fica colorida (vermelho claro marcante)
         const linhaVencidaClass = isVencido ? 'bg-red-100 border-red-200 text-red-900 font-medium' : 'hover:bg-gray-50';
 
-        // Renderização da Tabela Desktop
         if (exibePrazos) {
             tbody.innerHTML += `
                 <tr class="${linhaVencidaClass} transition border-b">
@@ -243,7 +252,6 @@ function renderizar(dados) {
             `;
         }
 
-        // Renderização dos Cards Mobile (com destaque de cor se vencido)
         const cardVencidoClass = isVencido ? 'bg-red-100 border-2 border-red-300 shadow-md' : 'bg-white border shadow-sm';
         
         let blocoInfoExtra = exibePrazos ? `
@@ -353,7 +361,7 @@ window.editarOSPorId = function(id) {
     }
 }
 
-// Salvar ou Atualizar no Firebase
+// Salvar ou Atualizar no Firebase com Validação Inteligente de Duplicidade
 window.salvarOS = async function(event) {
     event.preventDefault();
     const osIdEl = document.getElementById('osId');
@@ -361,19 +369,44 @@ window.salvarOS = async function(event) {
     
     const getVal = (elementId) => {
         const el = document.getElementById(elementId);
-        return el ? el.value : '';
+        return el ? el.value.trim() : '';
     };
+
+    const numOsDigitado = getVal('numOs');
+    const serialDigitado = getVal('serial');
+    const statusDigitado = getVal('status');
+
+    // Validação de Duplicidade Inteligente:
+    // Bloqueia se houver outra OS com o mesmo Nº de OS, 
+    // ou se houver outro registo ATIVO (não finalizado) com o mesmo Serial.
+    const duplicada = listaGlobal.find(item => {
+        if (item.id === id) return false;
+
+        const mesmoNumeroOS = (item.numOs === numOsDigitado);
+        const mesmoSerialAtivo = (item.serial === serialDigitado && item.status !== 'FINALIZADO');
+
+        return mesmoNumeroOS || mesmoSerialAtivo;
+    });
+
+    if (duplicada) {
+        if (duplicada.numOs === numOsDigitado) {
+            alert(`Atenção: Já existe outra Ordem de Serviço cadastrada com o Nº "${duplicada.numOs}" (${duplicada.empresa}).`);
+        } else {
+            alert(`Atenção: Este relógio (Serial: ${serialDigitado}) já possui uma OS ativa em andamento/espera (${duplicada.numOs} - ${duplicada.empresa}). Conclua o atendimento anterior antes de dar uma nova entrada.`);
+        }
+        return;
+    }
 
     const dadosOS = {
         empresa: getVal('empresa'),
         contato: getVal('contato'),
-        numOs: getVal('numOs'),
-        serial: getVal('serial'),
+        numOs: numOsDigitado,
+        serial: serialDigitado,
         modelo: getVal('modelo'),
         defeito: getVal('defeito'),
         diagnostico: getVal('diagnostico'),
         dataEntrada: getVal('dataEntrada'),
-        status: getVal('status'),
+        status: statusDigitado,
         observacao: getVal('observacao')
     };
 
@@ -399,7 +432,7 @@ window.excluirOS = async function(id) {
             carregarDados();
         } catch (error) {
             console.error("Erro ao excluir: ", error);
-            alert("Erro ao excluir o registro.");
+            alert("Erro ao excluir o registo.");
         }
     }
 }

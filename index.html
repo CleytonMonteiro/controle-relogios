@@ -6,6 +6,27 @@
     <title>Controle de Relógios na Assistência</title>
     <!-- Tailwind CSS para design responsivo -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Estilo exclusivo para quando mandar imprimir a etiqueta da OS */
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            #etiquetaImpressao, #etiquetaImpressao * {
+                visibility: visible;
+            }
+            #etiquetaImpressao {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                padding: 10px;
+                font-family: monospace;
+                color: #000;
+                background: #fff;
+            }
+        }
+    </style>
 </head>
 <body class="bg-gray-100 font-sans">
 
@@ -155,6 +176,9 @@
             </form>
         </div>
     </div>
+
+    <!-- Div para estruturar a Etiqueta de Impressão de Bancada -->
+    <div id="etiquetaImpressao" style="display:none;"></div>
 
     <!-- Script de Integração Firebase e Lógica -->
     <script type="module" src="app.js"></script>

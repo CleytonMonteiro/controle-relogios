@@ -215,7 +215,7 @@ function renderizar(dados) {
                 <tr class="${linhaVencidaClass} transition border-b">
                     <td class="px-3 py-3 font-medium">${item.empresa || ''}</td>
                     <td class="px-3 py-3">${item.contato || ''}</td>
-                    <td class="px-3 py-3">${item.numOs || ''}</td>
+                    <td class="px-3 py-3 font-bold text-blue-800">${item.numOs || ''}</td>
                     <td class="px-3 py-3 font-mono">${item.serial || ''}</td>
                     <td class="px-3 py-3 font-semibold text-blue-700">${item.modelo || ''}</td>
                     <td class="px-3 py-3">${item.defeito || ''}</td>
@@ -225,7 +225,8 @@ function renderizar(dados) {
                     <td class="px-3 py-3 text-center">${badgePrazo}</td>
                     <td class="px-3 py-3 text-center">${badgeStatus}</td>
                     <td class="px-3 py-3">${item.observacao || ''}</td>
-                    <td class="px-3 py-3 text-center space-x-2">
+                    <td class="px-3 py-3 text-center space-x-2 whitespace-nowrap">
+                        <button onclick='imprimirEtiquetaPorId("${item.id}")' class="text-amber-600 hover:text-amber-900 font-bold bg-amber-50 px-2 py-1 rounded border border-amber-200">Imprimir</button>
                         <button onclick='editarOSPorId("${item.id}")' class="text-blue-600 hover:text-blue-900 font-bold">Editar</button>
                         <button onclick='excluirOS("${item.id}")' class="text-red-600 hover:text-red-900 font-bold">Excluir</button>
                     </td>
@@ -236,7 +237,7 @@ function renderizar(dados) {
                 <tr class="${linhaVencidaClass} transition border-b">
                     <td class="px-3 py-3 font-medium">${item.empresa || ''}</td>
                     <td class="px-3 py-3">${item.contato || ''}</td>
-                    <td class="px-3 py-3">${item.numOs || ''}</td>
+                    <td class="px-3 py-3 font-bold text-blue-800">${item.numOs || ''}</td>
                     <td class="px-3 py-3 font-mono">${item.serial || ''}</td>
                     <td class="px-3 py-3 font-semibold text-blue-700">${item.modelo || ''}</td>
                     <td class="px-3 py-3">${item.defeito || ''}</td>
@@ -244,7 +245,8 @@ function renderizar(dados) {
                     <td class="px-3 py-3">${dataFormatada || ''}</td>
                     <td class="px-3 py-3 text-center">${badgeStatus}</td>
                     <td class="px-3 py-3">${item.observacao || ''}</td>
-                    <td class="px-3 py-3 text-center space-x-2">
+                    <td class="px-3 py-3 text-center space-x-2 whitespace-nowrap">
+                        <button onclick='imprimirEtiquetaPorId("${item.id}")' class="text-amber-600 hover:text-amber-900 font-bold bg-amber-50 px-2 py-1 rounded border border-amber-200">Imprimir</button>
                         <button onclick='editarOSPorId("${item.id}")' class="text-blue-600 hover:text-blue-900 font-bold">Editar</button>
                         <button onclick='excluirOS("${item.id}")' class="text-red-600 hover:text-red-900 font-bold">Excluir</button>
                     </td>
@@ -274,7 +276,7 @@ function renderizar(dados) {
                 </div>
                 <div class="text-xs text-gray-600"><strong>Contato:</strong> ${item.contato || 'Não informado'}</div>
                 <div class="text-xs text-gray-600 flex justify-between">
-                    <span>OS: <strong>${item.numOs || ''}</strong></span>
+                    <span>OS: <strong class="text-blue-800">${item.numOs || ''}</strong></span>
                     <span>Serial: <strong class="font-mono">${item.serial || ''}</strong></span>
                 </div>
                 <div class="text-sm text-gray-800"><strong>Modelo:</strong> <span class="text-blue-700 font-semibold">${item.modelo || ''}</span></div>
@@ -282,7 +284,8 @@ function renderizar(dados) {
                 <div class="text-sm text-gray-800"><strong>Diagnóstico:</strong> ${item.diagnostico || ''}</div>
                 ${blocoInfoExtra}
                 <div class="text-xs text-gray-700"><strong>Obs:</strong> ${item.observacao || ''}</div>
-                <div class="flex justify-end space-x-4 pt-2 border-t mt-1">
+                <div class="flex justify-end space-x-3 pt-2 border-t mt-1">
+                    <button onclick='imprimirEtiquetaPorId("${item.id}")' class="text-amber-700 font-bold text-xs bg-amber-50 px-2.5 py-1.5 rounded border border-amber-200">Imprimir</button>
                     <button onclick='editarOSPorId("${item.id}")' class="text-blue-600 font-bold text-sm px-2 py-1">Editar</button>
                     <button onclick='excluirOS("${item.id}")' class="text-red-600 font-bold text-sm px-2 py-1">Excluir</button>
                 </div>
@@ -361,6 +364,53 @@ window.editarOSPorId = function(id) {
     }
 }
 
+// Função para imprimir a etiqueta de bancada direto no relógio
+window.imprimirEtiquetaPorId = function(id) {
+    const item = listaGlobal.find(i => i.id === id);
+    if (!item) return;
+
+    let dataFormatada = item.dataEntrada;
+    if (item.dataEntrada && item.dataEntrada.includes('-')) {
+        const partes = item.dataEntrada.split('-');
+        dataFormatada = `${partes[2]}/${partes[1]}/${partes[0]}`;
+    }
+
+    const containerEtiqueta = document.getElementById('etiquetaImpressao');
+    if (containerEtiqueta) {
+        containerEtiqueta.style.display = 'block';
+        containerEtiqueta.innerHTML = `
+            <div style="border: 2px dashed #000; padding: 12px; max-width: 320px; font-family: Arial, sans-serif;">
+                <div style="font-size: 14px; font-weight: bold; text-align: center; border-bottom: 1px solid #000; padding-bottom: 4px; margin-bottom: 6px;">
+                    ASSISTÊNCIA TÉCNICA - OS
+                </div>
+                <div style="font-size: 16px; font-weight: bold; margin-bottom: 4px;">
+                    Nº OS: ${item.numOs || ''}
+                </div>
+                <div style="font-size: 13px; margin-bottom: 4px;">
+                    <strong>Empresa:</strong> ${item.empresa || ''}
+                </div>
+                <div style="font-size: 13px; margin-bottom: 4px;">
+                    <strong>Modelo:</strong> ${item.modelo || ''} | <strong>Serial:</strong> ${item.serial || ''}
+                </div>
+                <div style="font-size: 13px; margin-bottom: 4px;">
+                    <strong>Entrada:</strong> ${dataFormatada || ''}
+                </div>
+                <div style="font-size: 13px; border-top: 1px dotted #000; padding-top: 4px; margin-top: 4px;">
+                    <strong>Defeito:</strong> ${item.defeito || 'Não informado'}
+                </div>
+                ${item.observacao ? `<div style="font-size: 12px; margin-top: 4px;"><strong>Obs:</strong> ${item.observacao}</div>` : ''}
+            </div>
+        `;
+    }
+
+    setTimeout(() => {
+        window.print();
+        if (containerEtiqueta) {
+            containerEtiqueta.style.display = 'none';
+        }
+    }, 200);
+}
+
 // Salvar ou Atualizar no Firebase com Validação Inteligente de Duplicidade
 window.salvarOS = async function(event) {
     event.preventDefault();
@@ -376,9 +426,6 @@ window.salvarOS = async function(event) {
     const serialDigitado = getVal('serial');
     const statusDigitado = getVal('status');
 
-    // Validação de Duplicidade Inteligente:
-    // Bloqueia se houver outra OS com o mesmo Nº de OS, 
-    // ou se houver outro registo ATIVO (não finalizado) com o mesmo Serial.
     const duplicada = listaGlobal.find(item => {
         if (item.id === id) return false;
 

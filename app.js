@@ -18,6 +18,19 @@ const db = getFirestore(app);
 let listaGlobal = [];
 let abaAtual = "ANDAMENTO"; // Pode ser "ANDAMENTO", "AGUARDANDO", "ENVIADO" ou "FINALIZADO"
 
+// Função de Transição da Tela de Abertura
+window.entrarSistema = function() {
+    const tela = document.getElementById('telaAbertura');
+    const conteudo = document.getElementById('conteudoSistema');
+    if (tela && conteudo) {
+        tela.classList.add('opacity-0');
+        setTimeout(() => {
+            tela.style.display = 'none';
+            conteudo.classList.remove('opacity-0');
+        }, 700);
+    }
+}
+
 // Função auxiliar para calcular dias úteis (pausa se o status for AGUARDANDO ou ENVIADO)
 function calcularPrazos(dataEntradaStr, status) {
     if (!dataEntradaStr) return { diasPassados: 0, statusPrazo: "No Prazo" };
@@ -84,38 +97,79 @@ window.mudarAba = function(status) {
     const btnEnviado = document.getElementById('btnAbaEnviado');
     const btnFinalizadas = document.getElementById('btnAbaFinalizadas');
 
-    const resetClass = "flex-1 md:flex-none px-3 py-2 rounded-lg font-semibold text-sm transition bg-gray-200 text-gray-700 hover:bg-gray-300 whitespace-nowrap";
+    const resetClass = "flex-1 md:flex-none px-3 py-2 rounded-lg font-semibold text-sm transition bg-gray-200 text-gray-700 hover:bg-gray-300 whitespace-nowrap shadow-sm";
     if (btnAtivas) btnAtivas.className = resetClass;
     if (btnAguardando) btnAguardando.className = resetClass;
     if (btnEnviado) btnEnviado.className = resetClass;
     if (btnFinalizadas) btnFinalizadas.className = resetClass;
 
     if (status === 'ANDAMENTO' && btnAtivas) {
-        btnAtivas.className = "flex-1 md:flex-none px-3 py-2 rounded-lg font-semibold text-sm transition bg-blue-600 text-white whitespace-nowrap";
+        btnAtivas.className = "flex-1 md:flex-none px-3 py-2 rounded-lg font-semibold text-sm transition bg-blue-600 text-white whitespace-nowrap shadow-sm";
     } else if (status === 'AGUARDANDO' && btnAguardando) {
-        btnAguardando.className = "flex-1 md:flex-none px-3 py-2 rounded-lg font-semibold text-sm transition bg-amber-500 text-white whitespace-nowrap";
+        btnAguardando.className = "flex-1 md:flex-none px-3 py-2 rounded-lg font-semibold text-sm transition bg-amber-500 text-white whitespace-nowrap shadow-sm";
     } else if (status === 'ENVIADO' && btnEnviado) {
-        btnEnviado.className = "flex-1 md:flex-none px-3 py-2 rounded-lg font-semibold text-sm transition bg-purple-600 text-white whitespace-nowrap";
+        btnEnviado.className = "flex-1 md:flex-none px-3 py-2 rounded-lg font-semibold text-sm transition bg-purple-600 text-white whitespace-nowrap shadow-sm";
     } else if (status === 'FINALIZADO' && btnFinalizadas) {
-        btnFinalizadas.className = "flex-1 md:flex-none px-3 py-2 rounded-lg font-semibold text-sm transition bg-green-600 text-white whitespace-nowrap";
+        btnFinalizadas.className = "flex-1 md:flex-none px-3 py-2 rounded-lg font-semibold text-sm transition bg-green-600 text-white whitespace-nowrap shadow-sm";
     }
 
     filtrarDados();
 }
 
-// Renderizar na tela (Tabela para Desktop e Cards para Celular)
+// Renderizar na tela (Tabela Desktop e Cards Mobile com colunas adaptativas)
 function renderizar(dados) {
+    const thead = document.getElementById('tabelaCabecalho');
     const tbody = document.getElementById('tabelaCorpo');
     const containerMobile = document.getElementById('cardsMobile');
     
-    if (!tbody || !containerMobile) return;
+    if (!thead || !tbody || !containerMobile) return;
 
     tbody.innerHTML = '';
     containerMobile.innerHTML = '';
 
+    // Se estiver na aba "Em Andamento", exibe as colunas de Dias Úteis e Prazo. Nas outras abas, oculta-as para limpar a tela.
+    const exibePrazos = (abaAtual === 'ANDAMENTO');
+
+    if (exibePrazos) {
+        thead.innerHTML = `
+            <tr>
+                <th class="px-3 py-3 text-left">Empresa</th>
+                <th class="px-3 py-3 text-left">Contato</th>
+                <th class="px-3 py-3 text-left">Nº OS</th>
+                <th class="px-3 py-3 text-left">Serial</th>
+                <th class="px-3 py-3 text-left">Modelo</th>
+                <th class="px-3 py-3 text-left">Defeito</th>
+                <th class="px-3 py-3 text-left">Diagnóstico</th>
+                <th class="px-3 py-3 text-left">Entrada</th>
+                <th class="px-3 py-3 text-center">Dias Úteis</th>
+                <th class="px-3 py-3 text-center">Prazo</th>
+                <th class="px-3 py-3 text-center">Status</th>
+                <th class="px-3 py-3 text-left">Observações</th>
+                <th class="px-3 py-3 text-center">Ações</th>
+            </tr>
+        `;
+    } else {
+        thead.innerHTML = `
+            <tr>
+                <th class="px-3 py-3 text-left">Empresa</th>
+                <th class="px-3 py-3 text-left">Contato</th>
+                <th class="px-3 py-3 text-left">Nº OS</th>
+                <th class="px-3 py-3 text-left">Serial</th>
+                <th class="px-3 py-3 text-left">Modelo</th>
+                <th class="px-3 py-3 text-left">Defeito</th>
+                <th class="px-3 py-3 text-left">Diagnóstico</th>
+                <th class="px-3 py-3 text-left">Entrada</th>
+                <th class="px-3 py-3 text-center">Status</th>
+                <th class="px-3 py-3 text-left">Observações</th>
+                <th class="px-3 py-3 text-center">Ações</th>
+            </tr>
+        `;
+    }
+
     if (dados.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="13" class="text-center py-4 text-gray-400">Nenhum registro encontrado nesta visualização.</td></tr>`;
-        containerMobile.innerHTML = `<div class="text-center py-4 text-gray-400 bg-white rounded-lg shadow p-4 text-sm">Nenhum registro encontrado nesta visualização.</div>`;
+        const colspanVal = exibePrazos ? 13 : 11;
+        tbody.innerHTML = `<tr><td colspan="${colspanVal}" class="text-center py-6 text-gray-400">Nenhum registro encontrado nesta visualização.</td></tr>`;
+        containerMobile.innerHTML = `<div class="text-center py-6 text-gray-400 bg-white rounded-lg shadow p-4 text-sm">Nenhum registro encontrado nesta visualização.</div>`;
         return;
     }
 
@@ -128,6 +182,7 @@ function renderizar(dados) {
 
         const { diasPassados, statusPrazo } = calcularPrazos(item.dataEntrada, item.status);
         const statusAtual = item.status || 'ANDAMENTO';
+        const isVencido = (statusPrazo === 'Vencido' && statusAtual === 'ANDAMENTO');
 
         const badgePrazo = statusPrazo === 'Vencido'
             ? '<span class="px-2 py-1 rounded text-xs font-semibold bg-red-100 text-red-800">Vencido</span>'
@@ -142,53 +197,83 @@ function renderizar(dados) {
             badgeStatus = '<span class="px-2 py-1 rounded text-xs font-semibold bg-green-100 text-green-800">Finalizado</span>';
         }
 
-        const linhaVencidaClass = (statusPrazo === 'Vencido' && statusAtual === 'ANDAMENTO') ? 'bg-red-50 hover:bg-red-100' : 'hover:bg-gray-50';
+        // Se estiver vencido, a linha inteira fica colorida (vermelho claro marcante)
+        const linhaVencidaClass = isVencido ? 'bg-red-100 border-red-200 text-red-900 font-medium' : 'hover:bg-gray-50';
 
-        // Linha para Desktop (Usando editarOSPorId para evitar conflitos de sintaxe no VS Code)
-        tbody.innerHTML += `
-            <tr class="${linhaVencidaClass} transition">
-                <td class="px-3 py-3 font-medium text-gray-800">${item.empresa || ''}</td>
-                <td class="px-3 py-3 text-gray-600">${item.contato || ''}</td>
-                <td class="px-3 py-3">${item.numOs || ''}</td>
-                <td class="px-3 py-3 font-mono">${item.serial || ''}</td>
-                <td class="px-3 py-3 font-semibold text-blue-700">${item.modelo || ''}</td>
-                <td class="px-3 py-3">${item.defeito || ''}</td>
-                <td class="px-3 py-3">${item.diagnostico || ''}</td>
-                <td class="px-3 py-3">${dataFormatada || ''}</td>
-                <td class="px-3 py-3 text-center font-bold">${diasPassados}</td>
-                <td class="px-3 py-3 text-center">${badgePrazo}</td>
-                <td class="px-3 py-3 text-center">${badgeStatus}</td>
-                <td class="px-3 py-3">${item.observacao || ''}</td>
-                <td class="px-3 py-3 text-center space-x-2">
-                    <button onclick='editarOSPorId("${item.id}")' class="text-blue-600 hover:text-blue-900 font-bold">Editar</button>
-                    <button onclick='excluirOS("${item.id}")' class="text-red-600 hover:text-red-900 font-bold">Excluir</button>
-                </td>
-            </tr>
+        // Renderização da Tabela Desktop
+        if (exibePrazos) {
+            tbody.innerHTML += `
+                <tr class="${linhaVencidaClass} transition border-b">
+                    <td class="px-3 py-3 font-medium">${item.empresa || ''}</td>
+                    <td class="px-3 py-3">${item.contato || ''}</td>
+                    <td class="px-3 py-3">${item.numOs || ''}</td>
+                    <td class="px-3 py-3 font-mono">${item.serial || ''}</td>
+                    <td class="px-3 py-3 font-semibold text-blue-700">${item.modelo || ''}</td>
+                    <td class="px-3 py-3">${item.defeito || ''}</td>
+                    <td class="px-3 py-3">${item.diagnostico || ''}</td>
+                    <td class="px-3 py-3">${dataFormatada || ''}</td>
+                    <td class="px-3 py-3 text-center font-bold">${diasPassados}</td>
+                    <td class="px-3 py-3 text-center">${badgePrazo}</td>
+                    <td class="px-3 py-3 text-center">${badgeStatus}</td>
+                    <td class="px-3 py-3">${item.observacao || ''}</td>
+                    <td class="px-3 py-3 text-center space-x-2">
+                        <button onclick='editarOSPorId("${item.id}")' class="text-blue-600 hover:text-blue-900 font-bold">Editar</button>
+                        <button onclick='excluirOS("${item.id}")' class="text-red-600 hover:text-red-900 font-bold">Excluir</button>
+                    </td>
+                </tr>
+            `;
+        } else {
+            tbody.innerHTML += `
+                <tr class="${linhaVencidaClass} transition border-b">
+                    <td class="px-3 py-3 font-medium">${item.empresa || ''}</td>
+                    <td class="px-3 py-3">${item.contato || ''}</td>
+                    <td class="px-3 py-3">${item.numOs || ''}</td>
+                    <td class="px-3 py-3 font-mono">${item.serial || ''}</td>
+                    <td class="px-3 py-3 font-semibold text-blue-700">${item.modelo || ''}</td>
+                    <td class="px-3 py-3">${item.defeito || ''}</td>
+                    <td class="px-3 py-3">${item.diagnostico || ''}</td>
+                    <td class="px-3 py-3">${dataFormatada || ''}</td>
+                    <td class="px-3 py-3 text-center">${badgeStatus}</td>
+                    <td class="px-3 py-3">${item.observacao || ''}</td>
+                    <td class="px-3 py-3 text-center space-x-2">
+                        <button onclick='editarOSPorId("${item.id}")' class="text-blue-600 hover:text-blue-900 font-bold">Editar</button>
+                        <button onclick='excluirOS("${item.id}")' class="text-red-600 hover:text-red-900 font-bold">Excluir</button>
+                    </td>
+                </tr>
+            `;
+        }
+
+        // Renderização dos Cards Mobile (com destaque de cor se vencido)
+        const cardVencidoClass = isVencido ? 'bg-red-100 border-2 border-red-300 shadow-md' : 'bg-white border shadow-sm';
+        
+        let blocoInfoExtra = exibePrazos ? `
+            <div class="flex justify-between items-center text-xs bg-gray-100 p-2 rounded">
+                <span>Entrada: ${dataFormatada || ''}</span>
+                <span>Dias Úteis: <strong>${diasPassados}</strong></span>
+                <span>${badgePrazo}</span>
+            </div>
+        ` : `
+            <div class="flex justify-between items-center text-xs bg-gray-100 p-2 rounded">
+                <span>Entrada: ${dataFormatada || ''}</span>
+            </div>
         `;
 
-        // Card para Mobile / Tablet
-        const cardVencidoClass = (statusPrazo === 'Vencido' && statusAtual === 'ANDAMENTO') ? 'bg-red-50 border-red-200' : 'bg-white border';
-        
         containerMobile.innerHTML += `
-            <div class="${cardVencidoClass} rounded-lg p-4 shadow-sm flex flex-col gap-2">
+            <div class="${cardVencidoClass} rounded-xl p-4 flex flex-col gap-2">
                 <div class="flex justify-between items-center">
-                    <span class="font-bold text-gray-800 text-base">${item.empresa || ''}</span>
+                    <span class="font-bold text-gray-900 text-base">${item.empresa || ''}</span>
                     <div>${badgeStatus}</div>
                 </div>
-                <div class="text-xs text-gray-500"><strong>Contato:</strong> ${item.contato || 'Não informado'}</div>
-                <div class="text-xs text-gray-500 flex justify-between">
+                <div class="text-xs text-gray-600"><strong>Contato:</strong> ${item.contato || 'Não informado'}</div>
+                <div class="text-xs text-gray-600 flex justify-between">
                     <span>OS: <strong>${item.numOs || ''}</strong></span>
                     <span>Serial: <strong class="font-mono">${item.serial || ''}</strong></span>
                 </div>
-                <div class="text-sm text-gray-700"><strong>Modelo:</strong> <span class="text-blue-700 font-semibold">${item.modelo || ''}</span></div>
-                <div class="text-sm text-gray-700"><strong>Defeito:</strong> ${item.defeito || ''}</div>
-                <div class="text-sm text-gray-700"><strong>Diagnóstico:</strong> ${item.diagnostico || ''}</div>
-                <div class="flex justify-between items-center text-xs bg-gray-100 p-2 rounded">
-                    <span>Entrada: ${dataFormatada || ''}</span>
-                    <span>Dias Úteis: <strong>${diasPassados}</strong></span>
-                    <span>${badgePrazo}</span>
-                </div>
-                <div class="text-xs text-gray-600"><strong>Obs:</strong> ${item.observacao || ''}</div>
+                <div class="text-sm text-gray-800"><strong>Modelo:</strong> <span class="text-blue-700 font-semibold">${item.modelo || ''}</span></div>
+                <div class="text-sm text-gray-800"><strong>Defeito:</strong> ${item.defeito || ''}</div>
+                <div class="text-sm text-gray-800"><strong>Diagnóstico:</strong> ${item.diagnostico || ''}</div>
+                ${blocoInfoExtra}
+                <div class="text-xs text-gray-700"><strong>Obs:</strong> ${item.observacao || ''}</div>
                 <div class="flex justify-end space-x-4 pt-2 border-t mt-1">
                     <button onclick='editarOSPorId("${item.id}")' class="text-blue-600 font-bold text-sm px-2 py-1">Editar</button>
                     <button onclick='excluirOS("${item.id}")' class="text-red-600 font-bold text-sm px-2 py-1">Excluir</button>
@@ -261,7 +346,6 @@ window.editarOS = function(item) {
     if (modalOS) modalOS.classList.remove('hidden');
 }
 
-// Função auxiliar para buscar o item pelo ID e abrir o modal de edição (evita conflitos de aspas no HTML)
 window.editarOSPorId = function(id) {
     const item = listaGlobal.find(i => i.id === id);
     if (item) {

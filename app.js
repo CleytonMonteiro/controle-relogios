@@ -16,7 +16,7 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 let listaGlobal = [];
-let abaAtual = "ANDAMENTO"; // Pode ser "ANDAMENTO", "AGUARDANDO", "ENVIADO" ou "FINALIZADO"
+let abaAtual = "ENTRADA"; // Pode ser "ENTRADA", "BANCADA", "AGUARDANDO", "ENVIADO" ou "FINALIZADO"
 
 // Função de Transição da Tela de Abertura
 window.entrarSistema = function() {
@@ -65,7 +65,11 @@ async function carregarDados() {
         
         listaGlobal = [];
         querySnapshot.forEach((docSnap) => {
-            listaGlobal.push({ id: docSnap.id, ...docSnap.data() });
+            let dados = docSnap.data();
+            if (dados.status === 'ANDAMENTO') {
+                dados.status = 'ENTRADA';
+            }
+            listaGlobal.push({ id: docSnap.id, ...dados });
         });
         
         atualizarContadores();
@@ -76,7 +80,11 @@ async function carregarDados() {
             const fallbackSnapshot = await getDocs(collection(db, "relogios_os"));
             listaGlobal = [];
             fallbackSnapshot.forEach((docSnap) => {
-                listaGlobal.push({ id: docSnap.id, ...docSnap.data() });
+                let dados = docSnap.data();
+                if (dados.status === 'ANDAMENTO') {
+                    dados.status = 'ENTRADA';
+                }
+                listaGlobal.push({ id: docSnap.id, ...dados });
             });
             atualizarContadores();
             filtrarDados();
@@ -86,17 +94,20 @@ async function carregarDados() {
     }
 }
 
-// Atualiza os contadores no topo com os totais de cada status
+// Atualiza os contadores no topo com os totais de cada status principal
 function atualizarContadores() {
-    const ativas = listaGlobal.filter(item => (item.status || 'ANDAMENTO') === 'ANDAMENTO');
+    const entrada = listaGlobal.filter(item => (item.status || 'ENTRADA') === 'ENTRADA');
+    const bancada = listaGlobal.filter(item => item.status === 'BANCADA');
     const aguardando = listaGlobal.filter(item => item.status === 'AGUARDANDO');
     const enviados = listaGlobal.filter(item => item.status === 'ENVIADO');
 
-    const contadorAtivasEl = document.getElementById('contadorAtivas');
+    const contadorEntradaEl = document.getElementById('contadorEntrada');
+    const contadorBancadaEl = document.getElementById('contadorBancada');
     const contadorAguardandoEl = document.getElementById('contadorAguardando');
     const contadorEnviadosEl = document.getElementById('contadorEnviados');
 
-    if (contadorAtivasEl) contadorAtivasEl.innerText = ativas.length;
+    if (contadorEntradaEl) contadorEntradaEl.innerText = entrada.length;
+    if (contadorBancadaEl) contadorBancadaEl.innerText = bancada.length;
     if (contadorAguardandoEl) contadorAguardandoEl.innerText = aguardando.length;
     if (contadorEnviadosEl) contadorEnviadosEl.innerText = enviados.length;
 }
@@ -104,19 +115,23 @@ function atualizarContadores() {
 // Alternar entre as abas de visualização
 window.mudarAba = function(status) {
     abaAtual = status;
-    const btnAtivas = document.getElementById('btnAbaAtivas');
+    const btnEntrada = document.getElementById('btnAbaEntrada');
+    const btnBancada = document.getElementById('btnAbaBancada');
     const btnAguardando = document.getElementById('btnAbaAguardando');
     const btnEnviado = document.getElementById('btnAbaEnviado');
     const btnFinalizadas = document.getElementById('btnAbaFinalizadas');
 
     const resetClass = "flex-1 md:flex-none px-3 py-2 rounded-lg font-semibold text-sm transition bg-gray-200 text-gray-700 hover:bg-gray-300 whitespace-nowrap shadow-sm";
-    if (btnAtivas) btnAtivas.className = resetClass;
+    if (btnEntrada) btnEntrada.className = resetClass;
+    if (btnBancada) btnBancada.className = resetClass;
     if (btnAguardando) btnAguardando.className = resetClass;
     if (btnEnviado) btnEnviado.className = resetClass;
     if (btnFinalizadas) btnFinalizadas.className = resetClass;
 
-    if (status === 'ANDAMENTO' && btnAtivas) {
-        btnAtivas.className = "flex-1 md:flex-none px-3 py-2 rounded-lg font-semibold text-sm transition bg-blue-600 text-white whitespace-nowrap shadow-sm";
+    if (status === 'ENTRADA' && btnEntrada) {
+        btnEntrada.className = "flex-1 md:flex-none px-3 py-2 rounded-lg font-semibold text-sm transition bg-orange-500 text-white whitespace-nowrap shadow-sm";
+    } else if (status === 'BANCADA' && btnBancada) {
+        btnBancada.className = "flex-1 md:flex-none px-3 py-2 rounded-lg font-semibold text-sm transition bg-orange-500 text-white whitespace-nowrap shadow-sm";
     } else if (status === 'AGUARDANDO' && btnAguardando) {
         btnAguardando.className = "flex-1 md:flex-none px-3 py-2 rounded-lg font-semibold text-sm transition bg-amber-500 text-white whitespace-nowrap shadow-sm";
     } else if (status === 'ENVIADO' && btnEnviado) {
@@ -139,7 +154,7 @@ function renderizar(dados) {
     tbody.innerHTML = '';
     containerMobile.innerHTML = '';
 
-    const exibePrazos = (abaAtual === 'ANDAMENTO');
+    const exibePrazos = (abaAtual === 'ENTRADA' || abaAtual === 'BANCADA');
 
     if (exibePrazos) {
         thead.innerHTML = `
@@ -192,15 +207,17 @@ function renderizar(dados) {
         }
 
         const { diasPassados, statusPrazo } = calcularPrazos(item.dataEntrada, item.status);
-        const statusAtual = item.status || 'ANDAMENTO';
-        const isVencido = (statusPrazo === 'Vencido' && statusAtual === 'ANDAMENTO');
+        const statusAtual = item.status || 'ENTRADA';
+        const isVencido = (statusPrazo === 'Vencido' && (statusAtual === 'ENTRADA' || statusAtual === 'BANCADA'));
 
         const badgePrazo = statusPrazo === 'Vencido'
             ? '<span class="px-2 py-1 rounded text-xs font-semibold bg-red-100 text-red-800">Vencido</span>'
             : '<span class="px-2 py-1 rounded text-xs font-semibold bg-green-100 text-green-800">No Prazo</span>';
 
-        let badgeStatus = '<span class="px-2 py-1 rounded text-xs font-semibold bg-yellow-100 text-yellow-800">Andamento</span>';
-        if (statusAtual === 'AGUARDANDO') {
+        let badgeStatus = '<span class="px-2 py-1 rounded text-xs font-semibold bg-blue-100 text-blue-800">Entrada</span>';
+        if (statusAtual === 'BANCADA') {
+            badgeStatus = '<span class="px-2 py-1 rounded text-xs font-semibold bg-orange-100 text-orange-800">Bancada</span>';
+        } else if (statusAtual === 'AGUARDANDO') {
             badgeStatus = '<span class="px-2 py-1 rounded text-xs font-semibold bg-amber-100 text-amber-800">Aguardando</span>';
         } else if (statusAtual === 'ENVIADO') {
             badgeStatus = '<span class="px-2 py-1 rounded text-xs font-semibold bg-purple-100 text-purple-800">Enviado</span>';
@@ -215,9 +232,9 @@ function renderizar(dados) {
                 <tr class="${linhaVencidaClass} transition border-b">
                     <td class="px-3 py-3 font-medium">${item.empresa || ''}</td>
                     <td class="px-3 py-3">${item.contato || ''}</td>
-                    <td class="px-3 py-3 font-bold text-blue-800">${item.numOs || ''}</td>
-                    <td class="px-3 py-3 font-mono cursor-pointer text-purple-700 underline" title="Ver Histórico do Aparelho" onclick='verHistoricoPorSerial("${item.serial}")'>${item.serial || ''}</td>
-                    <td class="px-3 py-3 font-semibold text-blue-700">${item.modelo || ''}</td>
+                    <td class="px-3 py-3 font-bold text-orange-600">${item.numOs || ''}</td>
+                    <td class="px-3 py-3 font-mono cursor-pointer text-orange-600 underline" title="Ver Histórico do Aparelho" onclick='verHistoricoPorSerial("${item.serial}")'>${item.serial || ''}</td>
+                    <td class="px-3 py-3 font-semibold text-gray-800">${item.modelo || ''}</td>
                     <td class="px-3 py-3">${item.defeito || ''}</td>
                     <td class="px-3 py-3">${item.diagnostico || ''}</td>
                     <td class="px-3 py-3">${dataFormatada || ''}</td>
@@ -226,8 +243,8 @@ function renderizar(dados) {
                     <td class="px-3 py-3 text-center">${badgeStatus}</td>
                     <td class="px-3 py-3">${item.observacao || ''}</td>
                     <td class="px-3 py-3 text-center space-x-1.5 whitespace-nowrap">
-                        <button onclick='verHistoricoPorSerial("${item.serial}")' class="text-purple-700 hover:text-purple-900 font-bold bg-purple-50 px-2 py-1 rounded border border-purple-200" title="Histórico">Histórico</button>
-                        <button onclick='imprimirEtiquetaPorId("${item.id}")' class="text-amber-600 hover:text-amber-900 font-bold bg-amber-50 px-2 py-1 rounded border border-amber-200">Imprimir</button>
+                        <button onclick='verHistoricoPorSerial("${item.serial}")' class="text-orange-700 hover:text-orange-900 font-bold bg-orange-50 px-2 py-1 rounded border border-orange-200" title="Histórico">Histórico</button>
+                        <button onclick='imprimirEtiquetaPorId("${item.id}")' class="text-gray-700 hover:text-black font-bold bg-gray-100 px-2 py-1 rounded border border-gray-300">Imprimir</button>
                         <button onclick='editarOSPorId("${item.id}")' class="text-blue-600 hover:text-blue-900 font-bold">Editar</button>
                         <button onclick='excluirOS("${item.id}")' class="text-red-600 hover:text-red-900 font-bold">Excluir</button>
                     </td>
@@ -238,17 +255,17 @@ function renderizar(dados) {
                 <tr class="${linhaVencidaClass} transition border-b">
                     <td class="px-3 py-3 font-medium">${item.empresa || ''}</td>
                     <td class="px-3 py-3">${item.contato || ''}</td>
-                    <td class="px-3 py-3 font-bold text-blue-800">${item.numOs || ''}</td>
-                    <td class="px-3 py-3 font-mono cursor-pointer text-purple-700 underline" title="Ver Histórico do Aparelho" onclick='verHistoricoPorSerial("${item.serial}")'>${item.serial || ''}</td>
-                    <td class="px-3 py-3 font-semibold text-blue-700">${item.modelo || ''}</td>
+                    <td class="px-3 py-3 font-bold text-orange-600">${item.numOs || ''}</td>
+                    <td class="px-3 py-3 font-mono cursor-pointer text-orange-600 underline" title="Ver Histórico do Aparelho" onclick='verHistoricoPorSerial("${item.serial}")'>${item.serial || ''}</td>
+                    <td class="px-3 py-3 font-semibold text-gray-800">${item.modelo || ''}</td>
                     <td class="px-3 py-3">${item.defeito || ''}</td>
                     <td class="px-3 py-3">${item.diagnostico || ''}</td>
                     <td class="px-3 py-3">${dataFormatada || ''}</td>
                     <td class="px-3 py-3 text-center">${badgeStatus}</td>
                     <td class="px-3 py-3">${item.observacao || ''}</td>
                     <td class="px-3 py-3 text-center space-x-1.5 whitespace-nowrap">
-                        <button onclick='verHistoricoPorSerial("${item.serial}")' class="text-purple-700 hover:text-purple-900 font-bold bg-purple-50 px-2 py-1 rounded border border-purple-200" title="Histórico">Histórico</button>
-                        <button onclick='imprimirEtiquetaPorId("${item.id}")' class="text-amber-600 hover:text-amber-900 font-bold bg-amber-50 px-2 py-1 rounded border border-amber-200">Imprimir</button>
+                        <button onclick='verHistoricoPorSerial("${item.serial}")' class="text-orange-700 hover:text-orange-900 font-bold bg-orange-50 px-2 py-1 rounded border border-orange-200" title="Histórico">Histórico</button>
+                        <button onclick='imprimirEtiquetaPorId("${item.id}")' class="text-gray-700 hover:text-black font-bold bg-gray-100 px-2 py-1 rounded border border-gray-300">Imprimir</button>
                         <button onclick='editarOSPorId("${item.id}")' class="text-blue-600 hover:text-blue-900 font-bold">Editar</button>
                         <button onclick='excluirOS("${item.id}")' class="text-red-600 hover:text-red-900 font-bold">Excluir</button>
                     </td>
@@ -278,17 +295,17 @@ function renderizar(dados) {
                 </div>
                 <div class="text-xs text-gray-600"><strong>Contato:</strong> ${item.contato || 'Não informado'}</div>
                 <div class="text-xs text-gray-600 flex justify-between">
-                    <span>OS: <strong class="text-blue-800">${item.numOs || ''}</strong></span>
-                    <span>Serial: <strong class="font-mono text-purple-700 cursor-pointer underline" onclick='verHistoricoPorSerial("${item.serial}")'>${item.serial || ''}</strong></span>
+                    <span>OS: <strong class="text-orange-600">${item.numOs || ''}</strong></span>
+                    <span>Serial: <strong class="font-mono text-orange-600 cursor-pointer underline" onclick='verHistoricoPorSerial("${item.serial}")'>${item.serial || ''}</strong></span>
                 </div>
-                <div class="text-sm text-gray-800"><strong>Modelo:</strong> <span class="text-blue-700 font-semibold">${item.modelo || ''}</span></div>
+                <div class="text-sm text-gray-800"><strong>Modelo:</strong> <span class="text-gray-900 font-semibold">${item.modelo || ''}</span></div>
                 <div class="text-sm text-gray-800"><strong>Defeito:</strong> ${item.defeito || ''}</div>
                 <div class="text-sm text-gray-800"><strong>Diagnóstico:</strong> ${item.diagnostico || ''}</div>
                 ${blocoInfoExtra}
                 <div class="text-xs text-gray-700"><strong>Obs:</strong> ${item.observacao || ''}</div>
                 <div class="flex justify-end space-x-2 pt-2 border-t mt-1">
-                    <button onclick='verHistoricoPorSerial("${item.serial}")' class="text-purple-700 font-bold text-xs bg-purple-50 px-2 py-1.5 rounded border border-purple-200">Histórico</button>
-                    <button onclick='imprimirEtiquetaPorId("${item.id}")' class="text-amber-700 font-bold text-xs bg-amber-50 px-2.5 py-1.5 rounded border border-amber-200">Imprimir</button>
+                    <button onclick='verHistoricoPorSerial("${item.serial}")' class="text-orange-700 font-bold text-xs bg-orange-50 px-2 py-1.5 rounded border border-orange-200">Histórico</button>
+                    <button onclick='imprimirEtiquetaPorId("${item.id}")' class="text-gray-700 font-bold text-xs bg-gray-100 px-2.5 py-1.5 rounded border border-gray-300">Imprimir</button>
                     <button onclick='editarOSPorId("${item.id}")' class="text-blue-600 font-bold text-sm px-2 py-1">Editar</button>
                     <button onclick='excluirOS("${item.id}")' class="text-red-600 font-bold text-sm px-2 py-1">Excluir</button>
                 </div>
@@ -303,8 +320,8 @@ window.filtrarDados = function() {
     const termo = termoInput ? termoInput.value.toLowerCase() : '';
 
     const filtrados = listaGlobal.filter(item => {
-        const statusItem = item.status || 'ANDAMENTO';
-        const abaMatch = statusItem === abaAtual;
+        const statusItem = item.status || 'ENTRADA';
+        const abaMatch = (statusItem === abaAtual);
 
         const textoMatch = (item.empresa && item.empresa.toLowerCase().includes(termo)) ||
                            (item.numOs && item.numOs.toLowerCase().includes(termo)) ||
@@ -350,7 +367,7 @@ window.editarOS = function(item) {
     setVal('defeito', item.defeito);
     setVal('diagnostico', item.diagnostico);
     setVal('dataEntrada', item.dataEntrada);
-    setVal('status', item.status || 'ANDAMENTO');
+    setVal('status', item.status || 'ENTRADA');
     setVal('observacao', item.observacao);
 
     const modalTitulo = document.getElementById('modalTitulo');
@@ -374,7 +391,6 @@ window.verHistoricoPorSerial = function(serialBuscado) {
 
     if (!historicoContainer || !modalHistorico) return;
 
-    // Filtra todos os registos na lista global que possuem o mesmo número de série
     const historicos = listaGlobal.filter(item => item.serial && item.serial.toUpperCase() === serialBuscado.toUpperCase());
 
     if (historicos.length === 0) {
@@ -382,14 +398,13 @@ window.verHistoricoPorSerial = function(serialBuscado) {
         return;
     }
 
-    // Ordena do mais recente para o mais antigo com base na data de entrada
     historicos.sort((a, b) => new Date(b.dataEntrada) - new Date(a.dataEntrada));
 
     let htmlLinhaDoTempo = `
-        <div class="mb-3 p-3 bg-purple-50 rounded-lg border border-purple-200">
-            <span class="text-xs uppercase font-bold text-purple-900">Número de Série do Equipamento:</span>
-            <div class="text-lg font-mono font-bold text-purple-950">${serialBuscado}</div>
-            <div class="text-xs text-purple-700 mt-1">Total de passagens registradas na assistência: <strong>${historicos.length}</strong></div>
+        <div class="mb-3 p-3 bg-orange-50 rounded-lg border border-orange-200">
+            <span class="text-xs uppercase font-bold text-orange-900">Número de Série do Equipamento:</span>
+            <div class="text-lg font-mono font-bold text-orange-950">${serialBuscado}</div>
+            <div class="text-xs text-orange-700 mt-1">Total de passagens registradas na assistência: <strong>${historicos.length}</strong></div>
         </div>
         <div class="space-y-3">
     `;
@@ -401,9 +416,12 @@ window.verHistoricoPorSerial = function(serialBuscado) {
             dataFormatada = `${partes[2]}/${partes[1]}/${partes[0]}`;
         }
 
-        let corStatusBadge = 'bg-yellow-100 text-yellow-800';
-        let nomeStatus = 'Em Andamento';
-        if (h.status === 'AGUARDANDO') {
+        let corStatusBadge = 'bg-blue-100 text-blue-800';
+        let nomeStatus = 'Entrada';
+        if (h.status === 'BANCADA') {
+            corStatusBadge = 'bg-orange-100 text-orange-800';
+            nomeStatus = 'Bancada';
+        } else if (h.status === 'AGUARDANDO') {
             corStatusBadge = 'bg-amber-100 text-amber-800';
             nomeStatus = 'Aguardando';
         } else if (h.status === 'ENVIADO') {
@@ -415,14 +433,14 @@ window.verHistoricoPorSerial = function(serialBuscado) {
         }
 
         htmlLinhaDoTempo += `
-            <div class="p-4 rounded-xl border border-gray-200 bg-white shadow-sm flex flex-col gap-2 relative border-l-4 border-l-blue-600">
+            <div class="p-4 rounded-xl border border-gray-200 bg-white shadow-sm flex flex-col gap-2 relative border-l-4 border-l-orange-500">
                 <div class="flex justify-between items-center">
                     <span class="text-xs font-bold text-gray-500">Atendimento #${historicos.length - index}</span>
                     <span class="px-2 py-0.5 rounded text-xs font-semibold ${corStatusBadge}">${nomeStatus}</span>
                 </div>
                 <div class="flex justify-between items-center text-sm">
                     <span>Empresa: <strong>${h.empresa || ''}</strong></span>
-                    <span>OS: <strong class="text-blue-700">${h.numOs || ''}</strong></span>
+                    <span>OS: <strong class="text-orange-600">${h.numOs || ''}</strong></span>
                 </div>
                 <div class="text-xs text-gray-600">
                     <strong>Modelo:</strong> ${h.modelo || ''} | <strong>Entrada:</strong> ${dataFormatada}
@@ -430,7 +448,7 @@ window.verHistoricoPorSerial = function(serialBuscado) {
                 <div class="text-xs text-gray-700 bg-gray-50 p-2 rounded">
                     <strong>Defeito Relatado:</strong> ${h.defeito || 'Não informado'}
                 </div>
-                <div class="text-xs text-gray-700 bg-blue-50 p-2 rounded">
+                <div class="text-xs text-gray-700 bg-orange-50 p-2 rounded">
                     <strong>Diagnóstico Técnico:</strong> ${h.diagnostico || 'Não informado'}
                 </div>
                 ${h.observacao ? `<div class="text-xs text-gray-500"><strong>Obs:</strong> ${h.observacao}</div>` : ''}
@@ -465,7 +483,7 @@ window.imprimirEtiquetaPorId = function(id) {
         containerEtiqueta.innerHTML = `
             <div style="border: 2px dashed #000; padding: 12px; max-width: 320px; font-family: Arial, sans-serif;">
                 <div style="font-size: 14px; font-weight: bold; text-align: center; border-bottom: 1px solid #000; padding-bottom: 4px; margin-bottom: 6px;">
-                    ASSISTÊNCIA TÉCNICA - OS
+                    HITECH INFORMATICA - OS
                 </div>
                 <div style="font-size: 16px; font-weight: bold; margin-bottom: 4px;">
                     Nº OS: ${item.numOs || ''}
@@ -508,7 +526,6 @@ window.salvarOS = async function(event) {
 
     const numOsDigitado = getVal('numOs');
     const serialDigitado = getVal('serial');
-    const statusDigitado = getVal('status');
 
     const duplicada = listaGlobal.find(item => {
         if (item.id === id) return false;
@@ -537,7 +554,7 @@ window.salvarOS = async function(event) {
         defeito: getVal('defeito'),
         diagnostico: getVal('diagnostico'),
         dataEntrada: getVal('dataEntrada'),
-        status: statusDigitado,
+        status: getVal('status'),
         observacao: getVal('observacao')
     };
 

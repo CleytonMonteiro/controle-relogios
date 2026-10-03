@@ -3,51 +3,94 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Controle de Relógios na Assistência - HiTech Informática</title>
+    <title>HiTech Informática - Gestão de OS e Contratos</title>
     <!-- Tailwind CSS para design responsivo -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* Estilo exclusivo para quando mandar imprimir a etiqueta da OS */
         @media print {
+            @page {
+                size: A4 portrait;
+                margin: 10mm;
+            }
+
             body * {
                 visibility: hidden;
             }
-            #etiquetaImpressao, #etiquetaImpressao * {
+
+            #moduloContratos, #moduloContratos * {
                 visibility: visible;
             }
-            #etiquetaImpressao {
+
+            /* Esconde botões, inputs de busca, menu e rodapés */
+            header button, #inputBuscaContrato, .acoes-esconder, button {
+                display: none !important;
+            }
+
+            /* Posiciona o módulo de contratos no topo da folha impressa */
+            #moduloContratos {
                 position: absolute;
                 left: 0;
                 top: 0;
                 width: 100%;
-                padding: 10px;
-                font-family: monospace;
-                color: #000;
+                padding: 0 !important;
+                margin: 0 !important;
                 background: #fff;
+            }
+
+            /* Compacta a tabela para garantir que caiba em uma única página */
+            table {
+                width: 100% !important;
+                font-size: 9px !important;
+                border-collapse: collapse !important;
+            }
+
+            th, td {
+                padding: 4px 6px !important;
+                border: 1px solid #cbd5e1 !important;
+            }
+
+            th {
+                background-color: #f1f5f9 !important;
+                color: #000 !important;
+            }
+
+            .shadow, .rounded-lg, .rounded-xl {
+                box-shadow: none !important;
+                border-radius: 0 !important;
             }
         }
     </style>
 </head>
 <body class="bg-gray-100 font-sans">
 
-    <!-- Tela de Abertura / Apresentação (Paleta HiTech: Preto Grafite, Detalhes em Laranja e Branco) -->
+    <!-- Tela de Abertura / Seleção de Módulo (Paleta HiTech: Grafite e Laranja) -->
     <div id="telaAbertura" class="fixed inset-0 bg-zinc-950 z-50 flex flex-col items-center justify-center text-white transition-opacity duration-700 border-t-8 border-orange-500">
-        <div class="text-center p-6 max-w-md">
-            <div class="text-6xl mb-4">⏱</div>
+        <div class="text-center p-6 max-w-lg">
+            <div class="text-6xl mb-4">⚙️</div>
             <h1 class="text-3xl font-extrabold mb-2 tracking-wide">HITECH <span class="text-orange-500">INFORMÁTICA</span></h1>
-            <p class="text-gray-400 text-sm mb-8 uppercase tracking-wider font-medium">Controle de Assistência Técnica & Ponto</p>
-            <button onclick="entrarSistema()" class="bg-orange-500 hover:bg-orange-600 text-white font-bold px-8 py-3.5 rounded-xl shadow-lg transition transform hover:scale-105 uppercase tracking-wider text-sm border border-orange-400">
-                Acessar Sistema
-            </button>
+            <p class="text-gray-400 text-sm mb-8 uppercase tracking-wider font-medium">Painel de Gestão Integrada</p>
+            
+            <!-- Dois Botões de Acesso com IDs -->
+            <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                <button id="btnModuloOS" class="bg-orange-500 hover:bg-orange-600 text-white font-bold px-6 py-3.5 rounded-xl shadow-lg transition transform hover:scale-105 uppercase tracking-wider text-sm border border-orange-400 cursor-pointer">
+                    🔧 Controle de OS
+                </button>
+                <button id="btnModuloContratos" class="bg-zinc-800 hover:bg-zinc-700 text-white font-bold px-6 py-3.5 rounded-xl shadow-lg transition transform hover:scale-105 uppercase tracking-wider text-sm border border-zinc-600 cursor-pointer">
+                    📄 Contratos & Licenças
+                </button>
+            </div>
         </div>
     </div>
 
-    <!-- Conteúdo Principal do Sistema -->
-    <div id="conteudoSistema" class="container mx-auto p-4 max-w-full opacity-0 transition-opacity duration-500">
-        <!-- Cabeçalho com Contadores Dinâmicos -->
+    <!-- ================= CONTEÚDO: CONTROLE DE OS ================= -->
+    <div id="moduloOS" class="container mx-auto p-4 max-w-full hidden">
+        <!-- Cabeçalho OS -->
         <header class="flex flex-col md:flex-row justify-between items-center mb-6 bg-white p-4 rounded-lg shadow gap-4 border-l-4 border-orange-500">
             <div>
-                <h1 class="text-2xl font-bold text-gray-800">HiTech Informática - Controle de Assistência</h1>
+                <div class="flex items-center gap-3">
+                    <button onclick="voltarInicio()" class="text-xs bg-gray-200 hover:bg-gray-300 px-2 py-1 rounded font-bold text-gray-700">← Menu</button>
+                    <h1 class="text-2xl font-bold text-gray-800">HiTech Informática - Controle de OS</h1>
+                </div>
                 <div class="flex flex-wrap gap-4 mt-2 text-sm text-gray-600">
                     <p>Entrada: <span id="contadorEntrada" class="font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded">0</span></p>
                     <p>Bancada: <span id="contadorBancada" class="font-bold text-orange-600 bg-orange-50 px-2 py-0.5 rounded">0</span></p>
@@ -55,103 +98,147 @@
                     <p>Enviados: <span id="contadorEnviados" class="font-bold text-purple-600 bg-purple-50 px-2 py-0.5 rounded">0</span></p>
                 </div>
             </div>
-            <button onclick="abrirModal()" class="bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition w-full md:w-auto font-medium shadow">
+            <button onclick="abrirModalOS()" class="bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition w-full md:w-auto font-medium shadow">
                 + Nova OS
             </button>
         </header>
 
-        <!-- Abas de Navegação e Busca -->
+        <!-- Abas e Busca OS -->
         <div class="mb-6 flex flex-col md:flex-row justify-between items-center gap-4 bg-white p-4 rounded-lg shadow">
             <div class="flex gap-2 w-full md:w-auto overflow-x-auto pb-2 md:pb-0">
-                <button id="btnAbaEntrada" onclick="mudarAba('ENTRADA')" class="flex-1 md:flex-none px-3 py-2 rounded-lg font-semibold text-sm transition bg-orange-500 text-white whitespace-nowrap shadow-sm">
-                    📥 Entrada
-                </button>
-                <button id="btnAbaBancada" onclick="mudarAba('BANCADA')" class="flex-1 md:flex-none px-3 py-2 rounded-lg font-semibold text-sm transition bg-gray-200 text-gray-700 hover:bg-gray-300 whitespace-nowrap shadow-sm">
-                    🛠️ Bancada
-                </button>
-                <button id="btnAbaAguardando" onclick="mudarAba('AGUARDANDO')" class="flex-1 md:flex-none px-3 py-2 rounded-lg font-semibold text-sm transition bg-gray-200 text-gray-700 hover:bg-gray-300 whitespace-nowrap shadow-sm">
-                    ⏳ Aguardando
-                </button>
-                <button id="btnAbaEnviado" onclick="mudarAba('ENVIADO')" class="flex-1 md:flex-none px-3 py-2 rounded-lg font-semibold text-sm transition bg-gray-200 text-gray-700 hover:bg-gray-300 whitespace-nowrap shadow-sm">
-                    📤 Enviado
-                </button>
-                <button id="btnAbaFinalizadas" onclick="mudarAba('FINALIZADO')" class="flex-1 md:flex-none px-3 py-2 rounded-lg font-semibold text-sm transition bg-gray-200 text-gray-700 hover:bg-gray-300 whitespace-nowrap shadow-sm">
-                    ✅ Finalizados
-                </button>
+                <button id="btnAbaEntrada" onclick="mudarAbaOS('ENTRADA')" class="flex-1 md:flex-none px-3 py-2 rounded-lg font-semibold text-sm transition bg-orange-500 text-white whitespace-nowrap shadow-sm">📥 Entrada</button>
+                <button id="btnAbaBancada" onclick="mudarAbaOS('BANCADA')" class="flex-1 md:flex-none px-3 py-2 rounded-lg font-semibold text-sm transition bg-gray-200 text-gray-700 hover:bg-gray-300 whitespace-nowrap shadow-sm">🛠️ Bancada</button>
+                <button id="btnAbaAguardando" onclick="mudarAbaOS('AGUARDANDO')" class="flex-1 md:flex-none px-3 py-2 rounded-lg font-semibold text-sm transition bg-gray-200 text-gray-700 hover:bg-gray-300 whitespace-nowrap shadow-sm">⏳ Aguardando</button>
+                <button id="btnAbaEnviado" onclick="mudarAbaOS('ENVIADO')" class="flex-1 md:flex-none px-3 py-2 rounded-lg font-semibold text-sm transition bg-gray-200 text-gray-700 hover:bg-gray-300 whitespace-nowrap shadow-sm">📤 Enviado</button>
+                <button id="btnAbaFinalizadas" onclick="mudarAbaOS('FINALIZADO')" class="flex-1 md:flex-none px-3 py-2 rounded-lg font-semibold text-sm transition bg-gray-200 text-gray-700 hover:bg-gray-300 whitespace-nowrap shadow-sm">✅ Finalizados</button>
             </div>
             <div class="w-full md:w-80">
-                <input type="text" id="inputBusca" placeholder="Pesquisar por Empresa, OS, Serial ou Contato..." onkeyup="filtrarDados()" class="w-full p-2 border rounded-lg bg-white text-sm focus:ring-2 focus:ring-orange-500 outline-none">
+                <input type="text" id="inputBuscaOS" placeholder="Pesquisar OS, Empresa ou Serial..." onkeyup="filtrarDadosOS()" class="w-full p-2 border rounded-lg bg-white text-sm focus:ring-2 focus:ring-orange-500 outline-none uppercase">
             </div>
         </div>
 
-        <!-- Tabela Dinâmica (Desktop) -->
+        <!-- Tabela OS -->
         <div class="bg-white rounded-lg shadow overflow-hidden hidden md:block">
             <div class="overflow-x-auto">
                 <table class="min-w-full divide-y divide-gray-200 text-xs">
-                    <thead id="tabelaCabecalho" class="bg-gray-50 text-gray-700 uppercase">
-                        <!-- Cabeçalho dinâmico gerado via JS -->
-                    </thead>
-                    <tbody id="tabelaCorpo" class="divide-y divide-gray-200 text-gray-600">
-                        <!-- Dados carregados via JS -->
-                    </tbody>
+                    <thead id="tabelaCabecalhoOS" class="bg-gray-50 text-gray-700 uppercase"></thead>
+                    <tbody id="tabelaCorpoOS" class="divide-y divide-gray-200 text-gray-600 uppercase"></tbody>
                 </table>
             </div>
         </div>
+        <div id="cardsMobileOS" class="grid grid-cols-1 gap-4 md:hidden"></div>
+    </div>
 
-        <!-- Cards (Mobile) -->
-        <div id="cardsMobile" class="grid grid-cols-1 gap-4 md:hidden">
-            <!-- Cards carregados via JS -->
+    <!-- ================= CONTEÚDO: CONTRATOS & LICENÇAS ================= -->
+    <div id="moduloContratos" class="container mx-auto p-4 max-w-full hidden">
+        <!-- Cabeçalho Contratos -->
+        <header class="flex flex-col md:flex-row justify-between items-center mb-6 bg-white p-4 rounded-lg shadow gap-4 border-l-4 border-orange-500">
+            <div>
+                <div class="flex items-center gap-3">
+                    <button onclick="voltarInicio()" class="text-xs bg-gray-200 hover:bg-gray-300 px-2 py-1 rounded font-bold text-gray-700 acoes-esconder">← Menu</button>
+                    <h1 class="text-xl md:text-2xl font-bold text-gray-800">HiTech Informática - Relatório de Contratos</h1>
+                </div>
+                <!-- Contadores Visuais -->
+                <div class="flex flex-wrap gap-4 mt-2 text-xs md:text-sm text-gray-600">
+                    <p>Total: <span id="contadorTotalContratos" class="font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded">0</span></p>
+                    <p>Regulares: <span id="contadorRegularesContratos" class="font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded">0</span></p>
+                    <p>Próximos / Vencidos: <span id="contadorVencendoContratos" class="font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded">0</span></p>
+                </div>
+            </div>
+            <div class="flex gap-2 w-full md:w-auto acoes-esconder">
+                <button onclick="window.print()" class="bg-gray-700 text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition font-medium shadow text-sm flex items-center justify-center gap-2">
+                    🖨️ Imprimir
+                </button>
+                <button onclick="abrirModalContrato()" class="bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition font-medium shadow text-sm">
+                    + Novo Contrato
+                </button>
+            </div>
+        </header>
+
+        <!-- Banner de Alerta Automático (7 dias ou vencidos) -->
+        <div id="alertaVencimentos" class="mb-6 hidden bg-red-50 border-l-4 border-red-600 p-4 rounded-lg shadow acoes-esconder">
+            <div class="flex items-center">
+                <div class="text-red-600 text-2xl mr-3">⚠️</div>
+                <div>
+                    <h3 class="text-sm font-bold text-red-800 uppercase tracking-wide">Atenção: Contratos Próximos do Vencimento ou Vencidos!</h3>
+                    <div id="listaContratosAlerta" class="text-xs text-red-700 mt-1 space-y-1"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Busca Contratos -->
+        <div class="mb-6 flex justify-between items-center gap-4 bg-white p-4 rounded-lg shadow acoes-esconder">
+            <div class="w-full md:w-96">
+                <input type="text" id="inputBuscaContrato" placeholder="Pesquisar por Razão Social, CNPJ ou Plano..." onkeyup="filtrarDadosContratos()" class="w-full p-2 border rounded-lg bg-white text-sm focus:ring-2 focus:ring-orange-500 outline-none uppercase">
+            </div>
+        </div>
+
+        <!-- Tabela Contratos (Desktop) -->
+        <div class="bg-white rounded-lg shadow overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200 text-xs">
+                    <thead class="bg-gray-50 text-gray-700 uppercase">
+                        <tr>
+                            <th class="px-4 py-3 text-left">Razão Social</th>
+                            <th class="px-4 py-3 text-left whitespace-nowrap">CNPJ</th>
+                            <th class="px-4 py-3 text-center">Plano / Sistema</th>
+                            <th class="px-4 py-3 text-center">Periodicidade</th>
+                            <th class="px-4 py-3 text-center whitespace-nowrap">Vencimento</th>
+                            <th class="px-4 py-3 text-center">Status Licença</th>
+                            <th class="px-4 py-3 text-left">Observação</th>
+                            <th class="px-4 py-3 text-center acoes-esconder">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabelaCorpoContratos" class="divide-y divide-gray-200 text-gray-600 uppercase"></tbody>
+                </table>
+            </div>
         </div>
     </div>
 
-    <!-- Modal de Cadastro / Edição -->
+    <!-- ================= MODAL DE CADASTRO DE OS ================= -->
     <div id="modalOS" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center p-4 z-50">
         <div class="bg-white rounded-xl max-w-xl w-full p-6 shadow-2xl max-h-[90vh] overflow-y-auto border-t-4 border-orange-500">
-            <h2 id="modalTitulo" class="text-xl font-bold text-gray-800 mb-4 pb-2 border-b">Nova Ordem de Serviço</h2>
+            <h2 id="modalTituloOS" class="text-xl font-bold text-gray-800 mb-4 pb-2 border-b">Nova Ordem de Serviço</h2>
             <form id="formOS" onsubmit="salvarOS(event)" class="space-y-4">
                 <input type="hidden" id="osId">
-                
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                         <label class="block text-xs font-bold uppercase text-gray-700 mb-1">Empresa *</label>
-                        <input type="text" id="empresa" required class="w-full p-2.5 border-2 rounded-lg text-sm bg-gray-50 focus:bg-white focus:border-orange-500 outline-none transition">
+                        <input type="text" id="empresa" required class="w-full p-2.5 border-2 rounded-lg text-sm bg-gray-50 focus:bg-white focus:border-orange-500 outline-none transition uppercase">
                     </div>
                     <div>
                         <label class="block text-xs font-bold uppercase text-gray-700 mb-1">Contato</label>
-                        <input type="text" id="contato" class="w-full p-2.5 border-2 rounded-lg text-sm bg-gray-50 focus:bg-white focus:border-orange-500 outline-none transition">
+                        <input type="text" id="contato" class="w-full p-2.5 border-2 rounded-lg text-sm bg-gray-50 focus:bg-white focus:border-orange-500 outline-none transition uppercase">
                     </div>
                 </div>
-
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div>
                         <label class="block text-xs font-bold uppercase text-gray-700 mb-1">Nº OS *</label>
-                        <input type="text" id="numOs" required class="w-full p-2.5 border-2 rounded-lg text-sm bg-gray-50 focus:bg-white focus:border-orange-500 outline-none transition font-mono">
+                        <input type="text" id="numOs" required class="w-full p-2.5 border-2 rounded-lg text-sm bg-gray-50 focus:bg-white focus:border-orange-500 outline-none transition font-mono uppercase">
                     </div>
                     <div>
                         <label class="block text-xs font-bold uppercase text-gray-700 mb-1">Serial *</label>
-                        <input type="text" id="serial" required class="w-full p-2.5 border-2 rounded-lg text-sm bg-gray-50 focus:bg-white focus:border-orange-500 outline-none transition font-mono">
+                        <input type="text" id="serial" required class="w-full p-2.5 border-2 rounded-lg text-sm bg-gray-50 focus:bg-white focus:border-orange-500 outline-none transition font-mono uppercase">
                     </div>
                     <div>
                         <label class="block text-xs font-bold uppercase text-gray-700 mb-1">Modelo *</label>
-                        <select id="modelo" required class="w-full p-2.5 border-2 rounded-lg bg-gray-50 focus:bg-white focus:border-orange-500 outline-none transition text-sm font-semibold text-gray-800">
+                        <select id="modelo" required class="w-full p-2.5 border-2 rounded-lg bg-gray-50 focus:bg-white focus:border-orange-500 outline-none transition text-sm font-semibold text-gray-800 uppercase">
                             <option value="">Selecione</option>
                             <option value="IDCLASS">IDCLASS</option>
                             <option value="IDFACE">IDFACE</option>
                         </select>
                     </div>
                 </div>
-
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                         <label class="block text-xs font-bold uppercase text-gray-700 mb-1">Defeito Relatado</label>
-                        <textarea id="defeito" rows="2" class="w-full p-2.5 border-2 rounded-lg text-sm bg-gray-50 focus:bg-white focus:border-orange-500 outline-none transition"></textarea>
+                        <textarea id="defeito" rows="2" class="w-full p-2.5 border-2 rounded-lg text-sm bg-gray-50 focus:bg-white focus:border-orange-500 outline-none transition uppercase"></textarea>
                     </div>
                     <div>
                         <label class="block text-xs font-bold uppercase text-gray-700 mb-1">Diagnóstico Técnico</label>
-                        <textarea id="diagnostico" rows="2" class="w-full p-2.5 border-2 rounded-lg text-sm bg-gray-50 focus:bg-white focus:border-orange-500 outline-none transition"></textarea>
+                        <textarea id="diagnostico" rows="2" class="w-full p-2.5 border-2 rounded-lg text-sm bg-gray-50 focus:bg-white focus:border-orange-500 outline-none transition uppercase"></textarea>
                     </div>
                 </div>
-
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-gray-50 p-3 rounded-xl border border-gray-200">
                     <div>
                         <label class="block text-xs font-bold uppercase text-gray-700 mb-1">Data de Entrada *</label>
@@ -159,7 +246,7 @@
                     </div>
                     <div>
                         <label class="block text-xs font-bold uppercase text-gray-700 mb-1">Status Atual</label>
-                        <select id="status" class="w-full p-2.5 border-2 rounded-lg bg-white focus:border-orange-500 outline-none transition text-sm font-bold text-gray-800">
+                        <select id="statusOS" class="w-full p-2.5 border-2 rounded-lg bg-white focus:border-orange-500 outline-none transition text-sm font-bold text-gray-800">
                             <option value="ENTRADA">Entrada</option>
                             <option value="BANCADA">Bancada</option>
                             <option value="AGUARDANDO">Aguardando</option>
@@ -168,40 +255,88 @@
                         </select>
                     </div>
                 </div>
-
                 <div>
                     <label class="block text-xs font-bold uppercase text-gray-700 mb-1">Observações Gerais</label>
-                    <textarea id="observacao" rows="3" placeholder="Informações adicionais relevantes..." class="w-full p-2.5 border-2 rounded-lg text-sm bg-gray-50 focus:bg-white focus:border-orange-500 outline-none transition"></textarea>
+                    <textarea id="observacaoOS" rows="3" class="w-full p-2.5 border-2 rounded-lg text-sm bg-gray-50 focus:bg-white focus:border-orange-500 outline-none transition uppercase"></textarea>
                 </div>
-
                 <div class="flex justify-end gap-3 pt-4 border-t">
-                    <button type="button" onclick="fecharModal()" class="px-5 py-2.5 border rounded-xl text-gray-600 hover:bg-gray-100 font-medium text-sm transition">Cancelar</button>
+                    <button type="button" onclick="fecharModalOS()" class="px-5 py-2.5 border rounded-xl text-gray-600 hover:bg-gray-100 font-medium text-sm transition">Cancelar</button>
                     <button type="submit" class="px-6 py-2.5 bg-orange-500 text-white rounded-xl hover:bg-orange-600 font-bold text-sm shadow transition">Salvar Ordem</button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- Modal de Histórico do Aparelho (Linha do Tempo) -->
+    <!-- ================= MODAL DE CADASTRO DE CONTRATOS ================= -->
+    <div id="modalContrato" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-xl max-w-lg w-full p-6 shadow-2xl border-t-4 border-orange-500">
+            <h2 id="modalTituloContrato" class="text-xl font-bold text-gray-800 mb-4 pb-2 border-b">Novo Contrato / Licença</h2>
+            <form id="formContrato" onsubmit="salvarContrato(event)" class="space-y-4">
+                <input type="hidden" id="contratoId">
+                <div>
+                    <label class="block text-xs font-bold uppercase text-gray-700 mb-1">Razão Social *</label>
+                    <input type="text" id="razaoSocial" required class="w-full p-2.5 border-2 rounded-lg text-sm bg-gray-50 focus:bg-white focus:border-orange-500 outline-none transition uppercase">
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-gray-700 mb-1">CNPJ</label>
+                        <input type="text" id="cnpj" maxlength="18" placeholder="00.000.000/0000-00" oninput="aplicarMascaraCNPJ(this)" class="w-full p-2.5 border-2 rounded-lg text-sm bg-gray-50 focus:bg-white focus:border-orange-500 outline-none transition font-mono">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-gray-700 mb-1">Plano / Sistema *</label>
+                        <input type="text" id="plano" required placeholder="Ex: PRO, BASIC, ULTIMATE..." class="w-full p-2.5 border-2 rounded-lg text-sm bg-gray-50 focus:bg-white focus:border-orange-500 outline-none transition uppercase font-bold text-orange-600">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold uppercase text-gray-700 mb-1">Periodicidade *</label>
+                    <select id="periodicidade" required onchange="alternarPeriodicidade()" class="w-full p-2.5 border-2 rounded-lg bg-gray-50 focus:bg-white focus:border-orange-500 outline-none transition text-sm font-bold text-gray-800">
+                        <option value="MENSAL">MENSAL</option>
+                        <option value="ANUAL">ANUAL</option>
+                    </select>
+                </div>
+
+                <!-- Campo Dinâmico: Dia do Vencimento (Aparece se for MENSAL) -->
+                <div id="blocoDiaVencimento">
+                    <label class="block text-xs font-bold uppercase text-gray-700 mb-1">Dia do Vencimento (1 a 31) *</label>
+                    <input type="number" id="diaVencimento" min="1" max="31" class="w-full p-2.5 border-2 rounded-lg text-sm bg-gray-50 focus:bg-white focus:border-orange-500 outline-none transition font-bold text-gray-800">
+                </div>
+
+                <!-- Campo Dinâmico: Data de Vencimento (Aparece se for ANUAL) -->
+                <div id="blocoDataVencimento" class="hidden">
+                    <label class="block text-xs font-bold uppercase text-gray-700 mb-1">Data de Vencimento (Anual) *</label>
+                    <input type="date" id="dataVencimentoAnual" class="w-full p-2.5 border-2 rounded-lg text-sm bg-gray-50 focus:bg-white focus:border-orange-500 outline-none transition font-bold text-gray-800">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold uppercase text-gray-700 mb-1">Observação</label>
+                    <textarea id="observacaoContrato" rows="3" placeholder="Informações do contrato ou licença..." class="w-full p-2.5 border-2 rounded-lg text-sm bg-gray-50 focus:bg-white focus:border-orange-500 outline-none transition uppercase"></textarea>
+                </div>
+                <div class="flex justify-end gap-3 pt-4 border-t">
+                    <button type="button" onclick="fecharModalContrato()" class="px-5 py-2.5 border rounded-xl text-gray-600 hover:bg-gray-100 font-medium text-sm transition">Cancelar</button>
+                    <button type="submit" class="px-6 py-2.5 bg-orange-500 text-white rounded-xl hover:bg-orange-600 font-bold text-sm shadow transition">Salvar Contrato</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modais de Histórico e Impressão -->
     <div id="modalHistorico" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center p-4 z-50">
         <div class="bg-white rounded-xl max-w-2xl w-full p-6 shadow-2xl max-h-[90vh] overflow-y-auto border-t-4 border-orange-500">
             <div class="flex justify-between items-center mb-4 pb-2 border-b">
                 <h2 class="text-xl font-bold text-gray-800">Histórico do Aparelho (Linha do Tempo)</h2>
                 <button onclick="fecharModalHistorico()" class="text-gray-500 hover:text-gray-800 font-bold text-lg px-2">✕</button>
             </div>
-            <div id="conteudoHistorico" class="space-y-4">
-                <!-- Preenchido via JS -->
-            </div>
+            <div id="conteudoHistorico" class="space-y-4 uppercase"></div>
             <div class="flex justify-end pt-4 border-t mt-4">
                 <button type="button" onclick="fecharModalHistorico()" class="px-5 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium text-sm transition">Fechar</button>
             </div>
         </div>
     </div>
 
-    <!-- Div para estruturar a Etiqueta de Impressão de Bancada -->
     <div id="etiquetaImpressao" style="display:none;"></div>
 
-    <!-- Script de Integração Firebase e Lógica -->
+    <!-- Script Principal -->
     <script type="module" src="app.js"></script>
 </body>
 </html>

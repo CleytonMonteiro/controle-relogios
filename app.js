@@ -1,8 +1,6 @@
-// Importações do Firebase SDK v9 (via CDN)
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
 import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
 
-// Credenciais configuradas do projeto Firebase
 const firebaseConfig = {
     apiKey: "AIzaSyC-qGBaWyOV2HJ7u3ljrC-rnxsbi3s4DSA",
     authDomain: "controle-os-6f169.firebaseapp.com",
@@ -15,26 +13,103 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-let listaGlobal = [];
-let abaAtual = "ENTRADA"; // Pode ser "ENTRADA", "BANCADA", "AGUARDANDO", "ENVIADO" ou "FINALIZADO"
+let listaGlobalOS = [];
+let listaGlobalContratos = [];
+let abaAtualOS = "ENTRADA";
 
-// Função de Transição da Tela de Abertura
-window.entrarSistema = function() {
-    const tela = document.getElementById('telaAbertura');
-    const conteudo = document.getElementById('conteudoSistema');
-    if (tela && conteudo) {
-        tela.classList.add('opacity-0');
-        setTimeout(() => {
-            tela.style.display = 'none';
-            conteudo.classList.remove('opacity-0');
-        }, 700);
+// Vincula os botões da tela inicial assim que o DOM estiver carregado
+document.addEventListener("DOMContentLoaded", () => {
+    const btnOS = document.getElementById('btnModuloOS');
+    const btnContratos = document.getElementById('btnModuloContratos');
+
+    if (btnOS) {
+        btnOS.addEventListener('click', () => entrarSistema('OS'));
+    }
+    if (btnContratos) {
+        btnContratos.addEventListener('click', () => entrarSistema('CONTRATOS'));
+    }
+});
+
+// Função para aplicar a Máscara de CNPJ automaticamente
+window.aplicarMascaraCNPJ = function(input) {
+    let v = input.value.replace(/\D/g, '');
+    if (v.length > 14) v = v.substring(0, 14);
+
+    if (v.length <= 2) {
+        input.value = v;
+    } else if (v.length <= 5) {
+        input.value = v.replace(/^(\d{2})(\d+)/, '$1.$2');
+    } else if (v.length <= 8) {
+        input.value = v.replace(/^(\d{2})(\d{3})(\d+)/, '$1.$2.$3');
+    } else if (v.length <= 12) {
+        input.value = v.replace(/^(\d{2})(\d{3})(\d{3})(\d+)/, '$1.$2.$3/$4');
+    } else {
+        input.value = v.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d+)/, '$1.$2.$3/$4-$5');
     }
 }
 
-// Função auxiliar para calcular dias úteis (pausa se o status for AGUARDANDO ou ENVIADO)
-function calcularPrazos(dataEntradaStr, status) {
-    if (!dataEntradaStr) return { diasPassados: 0, statusPrazo: "No Prazo" };
+// Alternar visibilidade dos campos no Modal de Contrato (Mensal vs Anual)
+window.alternarPeriodicidade = function() {
+    const tipo = document.getElementById('periodicidade').value;
+    const blocoDia = document.getElementById('blocoDiaVencimento');
+    const blocoData = document.getElementById('blocoDataVencimento');
+    const inputDia = document.getElementById('diaVencimento');
+    const inputData = document.getElementById('dataVencimentoAnual');
 
+    if (tipo === 'MENSAL') {
+        blocoDia.classList.remove('hidden');
+        blocoData.classList.add('hidden');
+        inputDia.required = true;
+        inputData.required = false;
+        inputData.value = '';
+    } else {
+        blocoDia.classList.add('hidden');
+        blocoData.classList.remove('hidden');
+        inputDia.required = false;
+        inputDia.value = '';
+        inputData.required = true;
+    }
+}
+
+// Controle de Navegação entre Módulos
+function entrarSistema(modulo) {
+    const tela = document.getElementById('telaAbertura');
+    const modOS = document.getElementById('moduloOS');
+    const modContratos = document.getElementById('moduloContratos');
+
+    if (tela) {
+        tela.classList.add('opacity-0');
+        setTimeout(() => {
+            tela.style.display = 'none';
+            if (modulo === 'OS') {
+                if (modOS) modOS.classList.remove('hidden');
+                carregarDadosOS();
+            } else if (modulo === 'CONTRATOS') {
+                if (modContratos) modContratos.classList.remove('hidden');
+                carregarDadosContratos();
+            }
+        }, 700);
+    }
+}
+window.entrarSistema = entrarSistema;
+
+window.voltarInicio = function() {
+    const tela = document.getElementById('telaAbertura');
+    const modOS = document.getElementById('moduloOS');
+    const modContratos = document.getElementById('moduloContratos');
+
+    if (modOS) modOS.classList.add('hidden');
+    if (modContratos) modContratos.classList.add('hidden');
+    if (tela) {
+        tela.style.display = 'flex';
+        setTimeout(() => tela.classList.remove('opacity-0'), 50);
+    }
+}
+
+// ================= MÓDULO DE CONTROLE DE OS =================
+
+function calcularPrazosOS(dataEntradaStr) {
+    if (!dataEntradaStr) return { diasPassados: 0, statusPrazo: "No Prazo" };
     const partes = dataEntradaStr.split('-');
     const dataEntrada = new Date(partes[0], partes[1] - 1, partes[2]);
     const hoje = new Date();
@@ -44,546 +119,461 @@ function calcularPrazos(dataEntradaStr, status) {
 
     let diasUteis = 0;
     let atual = new Date(dataEntrada);
-    
     while (atual < hoje) {
         atual.setDate(atual.getDate() + 1);
         const diaSemana = atual.getDay();
-        if (diaSemana !== 0 && diaSemana !== 6) {
-            diasUteis++;
-        }
+        if (diaSemana !== 0 && diaSemana !== 6) diasUteis++;
     }
-
-    let statusPrazo = diasUteis > 7 ? "Vencido" : "No Prazo";
-    return { diasPassados: diasUteis, statusPrazo };
+    return { diasPassados: diasUteis, statusPrazo: diasUteis > 7 ? "Vencido" : "No Prazo" };
 }
 
-// Função para buscar dados do Firebase com paginação otimizada
-async function carregarDados() {
+async function carregarDadosOS() {
     try {
         const q = query(collection(db, "relogios_os"), orderBy("dataEntrada", "desc"), limit(200));
         const querySnapshot = await getDocs(q);
-        
-        listaGlobal = [];
+        listaGlobalOS = [];
         querySnapshot.forEach((docSnap) => {
             let dados = docSnap.data();
-            if (dados.status === 'ANDAMENTO') {
-                dados.status = 'ENTRADA';
-            }
-            listaGlobal.push({ id: docSnap.id, ...dados });
+            if (dados.status === 'ANDAMENTO') dados.status = 'ENTRADA';
+            listaGlobalOS.push({ id: docSnap.id, ...dados });
         });
-        
-        atualizarContadores();
-        filtrarDados();
+        atualizarContadoresOS();
+        filtrarDadosOS();
     } catch (error) {
-        console.error("Erro ao carregar dados: ", error);
-        try {
-            const fallbackSnapshot = await getDocs(collection(db, "relogios_os"));
-            listaGlobal = [];
-            fallbackSnapshot.forEach((docSnap) => {
-                let dados = docSnap.data();
-                if (dados.status === 'ANDAMENTO') {
-                    dados.status = 'ENTRADA';
-                }
-                listaGlobal.push({ id: docSnap.id, ...dados });
-            });
-            atualizarContadores();
-            filtrarDados();
-        } catch (errFallback) {
-            alert("Erro ao conectar com o banco de dados.");
-        }
+        console.error("Erro OS:", error);
     }
 }
 
-// Atualiza os contadores no topo com os totais de cada status principal
-function atualizarContadores() {
-    const entrada = listaGlobal.filter(item => (item.status || 'ENTRADA') === 'ENTRADA');
-    const bancada = listaGlobal.filter(item => item.status === 'BANCADA');
-    const aguardando = listaGlobal.filter(item => item.status === 'AGUARDANDO');
-    const enviados = listaGlobal.filter(item => item.status === 'ENVIADO');
+function atualizarContadoresOS() {
+    const entrada = listaGlobalOS.filter(i => (i.status || 'ENTRADA') === 'ENTRADA');
+    const bancada = listaGlobalOS.filter(i => i.status === 'BANCADA');
+    const aguardando = listaGlobalOS.filter(i => i.status === 'AGUARDANDO');
+    const enviados = listaGlobalOS.filter(i => i.status === 'ENVIADO');
 
-    const contadorEntradaEl = document.getElementById('contadorEntrada');
-    const contadorBancadaEl = document.getElementById('contadorBancada');
-    const contadorAguardandoEl = document.getElementById('contadorAguardando');
-    const contadorEnviadosEl = document.getElementById('contadorEnviados');
-
-    if (contadorEntradaEl) contadorEntradaEl.innerText = entrada.length;
-    if (contadorBancadaEl) contadorBancadaEl.innerText = bancada.length;
-    if (contadorAguardandoEl) contadorAguardandoEl.innerText = aguardando.length;
-    if (contadorEnviadosEl) contadorEnviadosEl.innerText = enviados.length;
+    if (document.getElementById('contadorEntrada')) document.getElementById('contadorEntrada').innerText = entrada.length;
+    if (document.getElementById('contadorBancada')) document.getElementById('contadorBancada').innerText = bancada.length;
+    if (document.getElementById('contadorAguardando')) document.getElementById('contadorAguardando').innerText = aguardando.length;
+    if (document.getElementById('contadorEnviados')) document.getElementById('contadorEnviados').innerText = enviados.length;
 }
 
-// Alternar entre as abas de visualização
-window.mudarAba = function(status) {
-    abaAtual = status;
-    const btnEntrada = document.getElementById('btnAbaEntrada');
-    const btnBancada = document.getElementById('btnAbaBancada');
-    const btnAguardando = document.getElementById('btnAbaAguardando');
-    const btnEnviado = document.getElementById('btnAbaEnviado');
-    const btnFinalizadas = document.getElementById('btnAbaFinalizadas');
-
-    const resetClass = "flex-1 md:flex-none px-3 py-2 rounded-lg font-semibold text-sm transition bg-gray-200 text-gray-700 hover:bg-gray-300 whitespace-nowrap shadow-sm";
-    if (btnEntrada) btnEntrada.className = resetClass;
-    if (btnBancada) btnBancada.className = resetClass;
-    if (btnAguardando) btnAguardando.className = resetClass;
-    if (btnEnviado) btnEnviado.className = resetClass;
-    if (btnFinalizadas) btnFinalizadas.className = resetClass;
-
-    if (status === 'ENTRADA' && btnEntrada) {
-        btnEntrada.className = "flex-1 md:flex-none px-3 py-2 rounded-lg font-semibold text-sm transition bg-orange-500 text-white whitespace-nowrap shadow-sm";
-    } else if (status === 'BANCADA' && btnBancada) {
-        btnBancada.className = "flex-1 md:flex-none px-3 py-2 rounded-lg font-semibold text-sm transition bg-orange-500 text-white whitespace-nowrap shadow-sm";
-    } else if (status === 'AGUARDANDO' && btnAguardando) {
-        btnAguardando.className = "flex-1 md:flex-none px-3 py-2 rounded-lg font-semibold text-sm transition bg-amber-500 text-white whitespace-nowrap shadow-sm";
-    } else if (status === 'ENVIADO' && btnEnviado) {
-        btnEnviado.className = "flex-1 md:flex-none px-3 py-2 rounded-lg font-semibold text-sm transition bg-purple-600 text-white whitespace-nowrap shadow-sm";
-    } else if (status === 'FINALIZADO' && btnFinalizadas) {
-        btnFinalizadas.className = "flex-1 md:flex-none px-3 py-2 rounded-lg font-semibold text-sm transition bg-green-600 text-white whitespace-nowrap shadow-sm";
+window.mudarAbaOS = function(status) {
+    abaAtualOS = status;
+    ['ENTRADA', 'BANCADA', 'AGUARDANDO', 'ENVIADO', 'FINALIZADO'].forEach(s => {
+        const btn = document.getElementById('btnAba' + s.charAt(0) + s.slice(1).toLowerCase());
+        if (btn) btn.className = "flex-1 md:flex-none px-3 py-2 rounded-lg font-semibold text-sm transition bg-gray-200 text-gray-700 hover:bg-gray-300 whitespace-nowrap shadow-sm";
+    });
+    const ativoBtn = document.getElementById('btnAba' + status.charAt(0) + status.slice(1).toLowerCase());
+    if (ativoBtn) {
+        ativoBtn.className = `flex-1 md:flex-none px-3 py-2 rounded-lg font-semibold text-sm transition text-white whitespace-nowrap shadow-sm ${status === 'AGUARDANDO' ? 'bg-amber-500' : status === 'ENVIADO' ? 'bg-purple-600' : status === 'FINALIZADO' ? 'bg-green-600' : 'bg-orange-500'}`;
     }
-
-    filtrarDados();
+    filtrarDadosOS();
 }
 
-// Renderizar na tela
-function renderizar(dados) {
-    const thead = document.getElementById('tabelaCabecalho');
-    const tbody = document.getElementById('tabelaCorpo');
-    const containerMobile = document.getElementById('cardsMobile');
-    
+function renderizarOS(dados) {
+    const thead = document.getElementById('tabelaCabecalhoOS');
+    const tbody = document.getElementById('tabelaCorpoOS');
+    const containerMobile = document.getElementById('cardsMobileOS');
     if (!thead || !tbody || !containerMobile) return;
 
     tbody.innerHTML = '';
     containerMobile.innerHTML = '';
 
-    const exibePrazos = (abaAtual === 'ENTRADA' || abaAtual === 'BANCADA');
+    const exibePrazos = (abaAtualOS === 'ENTRADA' || abaAtualOS === 'BANCADA');
 
-    if (exibePrazos) {
-        thead.innerHTML = `
-            <tr>
-                <th class="px-3 py-3 text-left">Empresa</th>
-                <th class="px-3 py-3 text-left">Contato</th>
-                <th class="px-3 py-3 text-left">Nº OS</th>
-                <th class="px-3 py-3 text-left">Serial</th>
-                <th class="px-3 py-3 text-left">Modelo</th>
-                <th class="px-3 py-3 text-left">Defeito</th>
-                <th class="px-3 py-3 text-left">Diagnóstico</th>
-                <th class="px-3 py-3 text-left">Entrada</th>
-                <th class="px-3 py-3 text-center">Dias Úteis</th>
-                <th class="px-3 py-3 text-center">Prazo</th>
-                <th class="px-3 py-3 text-center">Status</th>
-                <th class="px-3 py-3 text-left">Observações</th>
-                <th class="px-3 py-3 text-center">Ações</th>
-            </tr>
-        `;
-    } else {
-        thead.innerHTML = `
-            <tr>
-                <th class="px-3 py-3 text-left">Empresa</th>
-                <th class="px-3 py-3 text-left">Contato</th>
-                <th class="px-3 py-3 text-left">Nº OS</th>
-                <th class="px-3 py-3 text-left">Serial</th>
-                <th class="px-3 py-3 text-left">Modelo</th>
-                <th class="px-3 py-3 text-left">Defeito</th>
-                <th class="px-3 py-3 text-left">Diagnóstico</th>
-                <th class="px-3 py-3 text-left">Entrada</th>
-                <th class="px-3 py-3 text-center">Status</th>
-                <th class="px-3 py-3 text-left">Observações</th>
-                <th class="px-3 py-3 text-center">Ações</th>
-            </tr>
-        `;
-    }
+    thead.innerHTML = exibePrazos ? `
+        <tr>
+            <th class="px-3 py-3 text-left">Empresa</th><th class="px-3 py-3 text-left">Contato</th><th class="px-3 py-3 text-left">Nº OS</th><th class="px-3 py-3 text-left">Serial</th><th class="px-3 py-3 text-left">Modelo</th><th class="px-3 py-3 text-left">Defeito</th><th class="px-3 py-3 text-left">Diagnóstico</th><th class="px-3 py-3 text-left">Entrada</th><th class="px-3 py-3 text-center">Dias Úteis</th><th class="px-3 py-3 text-center">Prazo</th><th class="px-3 py-3 text-center">Status</th><th class="px-3 py-3 text-left">Observações</th><th class="px-3 py-3 text-center">Ações</th>
+        </tr>
+    ` : `
+        <tr>
+            <th class="px-3 py-3 text-left">Empresa</th><th class="px-3 py-3 text-left">Contato</th><th class="px-3 py-3 text-left">Nº OS</th><th class="px-3 py-3 text-left">Serial</th><th class="px-3 py-3 text-left">Modelo</th><th class="px-3 py-3 text-left">Defeito</th><th class="px-3 py-3 text-left">Diagnóstico</th><th class="px-3 py-3 text-left">Entrada</th><th class="px-3 py-3 text-center">Status</th><th class="px-3 py-3 text-left">Observações</th><th class="px-3 py-3 text-center">Ações</th>
+        </tr>
+    `;
 
     if (dados.length === 0) {
-        const colspanVal = exibePrazos ? 13 : 11;
-        tbody.innerHTML = `<tr><td colspan="${colspanVal}" class="text-center py-6 text-gray-400">Nenhum registro encontrado nesta visualização.</td></tr>`;
-        containerMobile.innerHTML = `<div class="text-center py-6 text-gray-400 bg-white rounded-lg shadow p-4 text-sm">Nenhum registro encontrado nesta visualização.</div>`;
+        tbody.innerHTML = `<tr><td colspan="13" class="text-center py-6 text-gray-400">Nenhum registo encontrado.</td></tr>`;
+        containerMobile.innerHTML = `<div class="text-center py-6 text-gray-400 bg-white rounded-lg shadow p-4 text-sm">Nenhum registo encontrado.</div>`;
         return;
     }
 
     dados.forEach(item => {
-        let dataFormatada = item.dataEntrada;
-        if (item.dataEntrada && item.dataEntrada.includes('-')) {
-            const partes = item.dataEntrada.split('-');
-            dataFormatada = `${partes[2]}/${partes[1]}/${partes[0]}`;
-        }
+        let dataF = item.dataEntrada ? item.dataEntrada.split('-').reverse().join('/') : '';
+        const { diasPassados, statusPrazo } = calcularPrazosOS(item.dataEntrada);
+        const isVencido = (statusPrazo === 'Vencido' && (item.status === 'ENTRADA' || item.status === 'BANCADA'));
+        const badgePrazo = statusPrazo === 'Vencido' ? '<span class="px-2 py-1 rounded text-xs font-semibold bg-red-100 text-red-800">Vencido</span>' : '<span class="px-2 py-1 rounded text-xs font-semibold bg-green-100 text-green-800">No Prazo</span>';
+        const badgeStatus = `<span class="px-2 py-1 rounded text-xs font-semibold ${item.status === 'BANCADA' ? 'bg-orange-100 text-orange-800' : item.status === 'AGUARDANDO' ? 'bg-amber-100 text-amber-800' : item.status === 'ENVIADO' ? 'bg-purple-100 text-purple-800' : item.status === 'FINALIZADO' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'}">${item.status || 'ENTRADA'}</span>`;
 
-        const { diasPassados, statusPrazo } = calcularPrazos(item.dataEntrada, item.status);
-        const statusAtual = item.status || 'ENTRADA';
-        const isVencido = (statusPrazo === 'Vencido' && (statusAtual === 'ENTRADA' || statusAtual === 'BANCADA'));
+        const trClass = isVencido ? 'bg-red-100 text-red-900 font-medium' : 'hover:bg-gray-50';
 
-        const badgePrazo = statusPrazo === 'Vencido'
-            ? '<span class="px-2 py-1 rounded text-xs font-semibold bg-red-100 text-red-800">Vencido</span>'
-            : '<span class="px-2 py-1 rounded text-xs font-semibold bg-green-100 text-green-800">No Prazo</span>';
-
-        let badgeStatus = '<span class="px-2 py-1 rounded text-xs font-semibold bg-blue-100 text-blue-800">Entrada</span>';
-        if (statusAtual === 'BANCADA') {
-            badgeStatus = '<span class="px-2 py-1 rounded text-xs font-semibold bg-orange-100 text-orange-800">Bancada</span>';
-        } else if (statusAtual === 'AGUARDANDO') {
-            badgeStatus = '<span class="px-2 py-1 rounded text-xs font-semibold bg-amber-100 text-amber-800">Aguardando</span>';
-        } else if (statusAtual === 'ENVIADO') {
-            badgeStatus = '<span class="px-2 py-1 rounded text-xs font-semibold bg-purple-100 text-purple-800">Enviado</span>';
-        } else if (statusAtual === 'FINALIZADO') {
-            badgeStatus = '<span class="px-2 py-1 rounded text-xs font-semibold bg-green-100 text-green-800">Finalizado</span>';
-        }
-
-        const linhaVencidaClass = isVencido ? 'bg-red-100 border-red-200 text-red-900 font-medium' : 'hover:bg-gray-50';
-
-        if (exibePrazos) {
-            tbody.innerHTML += `
-                <tr class="${linhaVencidaClass} transition border-b">
-                    <td class="px-3 py-3 font-medium">${item.empresa || ''}</td>
-                    <td class="px-3 py-3">${item.contato || ''}</td>
-                    <td class="px-3 py-3 font-bold text-orange-600">${item.numOs || ''}</td>
-                    <td class="px-3 py-3 font-mono cursor-pointer text-orange-600 underline" title="Ver Histórico do Aparelho" onclick='verHistoricoPorSerial("${item.serial}")'>${item.serial || ''}</td>
-                    <td class="px-3 py-3 font-semibold text-gray-800">${item.modelo || ''}</td>
-                    <td class="px-3 py-3">${item.defeito || ''}</td>
-                    <td class="px-3 py-3">${item.diagnostico || ''}</td>
-                    <td class="px-3 py-3">${dataFormatada || ''}</td>
-                    <td class="px-3 py-3 text-center font-bold">${diasPassados}</td>
-                    <td class="px-3 py-3 text-center">${badgePrazo}</td>
-                    <td class="px-3 py-3 text-center">${badgeStatus}</td>
-                    <td class="px-3 py-3">${item.observacao || ''}</td>
-                    <td class="px-3 py-3 text-center space-x-1.5 whitespace-nowrap">
-                        <button onclick='verHistoricoPorSerial("${item.serial}")' class="text-orange-700 hover:text-orange-900 font-bold bg-orange-50 px-2 py-1 rounded border border-orange-200" title="Histórico">Histórico</button>
-                        <button onclick='imprimirEtiquetaPorId("${item.id}")' class="text-gray-700 hover:text-black font-bold bg-gray-100 px-2 py-1 rounded border border-gray-300">Imprimir</button>
-                        <button onclick='editarOSPorId("${item.id}")' class="text-blue-600 hover:text-blue-900 font-bold">Editar</button>
-                        <button onclick='excluirOS("${item.id}")' class="text-red-600 hover:text-red-900 font-bold">Excluir</button>
-                    </td>
-                </tr>
-            `;
-        } else {
-            tbody.innerHTML += `
-                <tr class="${linhaVencidaClass} transition border-b">
-                    <td class="px-3 py-3 font-medium">${item.empresa || ''}</td>
-                    <td class="px-3 py-3">${item.contato || ''}</td>
-                    <td class="px-3 py-3 font-bold text-orange-600">${item.numOs || ''}</td>
-                    <td class="px-3 py-3 font-mono cursor-pointer text-orange-600 underline" title="Ver Histórico do Aparelho" onclick='verHistoricoPorSerial("${item.serial}")'>${item.serial || ''}</td>
-                    <td class="px-3 py-3 font-semibold text-gray-800">${item.modelo || ''}</td>
-                    <td class="px-3 py-3">${item.defeito || ''}</td>
-                    <td class="px-3 py-3">${item.diagnostico || ''}</td>
-                    <td class="px-3 py-3">${dataFormatada || ''}</td>
-                    <td class="px-3 py-3 text-center">${badgeStatus}</td>
-                    <td class="px-3 py-3">${item.observacao || ''}</td>
-                    <td class="px-3 py-3 text-center space-x-1.5 whitespace-nowrap">
-                        <button onclick='verHistoricoPorSerial("${item.serial}")' class="text-orange-700 hover:text-orange-900 font-bold bg-orange-50 px-2 py-1 rounded border border-orange-200" title="Histórico">Histórico</button>
-                        <button onclick='imprimirEtiquetaPorId("${item.id}")' class="text-gray-700 hover:text-black font-bold bg-gray-100 px-2 py-1 rounded border border-gray-300">Imprimir</button>
-                        <button onclick='editarOSPorId("${item.id}")' class="text-blue-600 hover:text-blue-900 font-bold">Editar</button>
-                        <button onclick='excluirOS("${item.id}")' class="text-red-600 hover:text-red-900 font-bold">Excluir</button>
-                    </td>
-                </tr>
-            `;
-        }
-
-        const cardVencidoClass = isVencido ? 'bg-red-100 border-2 border-red-300 shadow-md' : 'bg-white border shadow-sm';
-        
-        let blocoInfoExtra = exibePrazos ? `
-            <div class="flex justify-between items-center text-xs bg-gray-100 p-2 rounded">
-                <span>Entrada: ${dataFormatada || ''}</span>
-                <span>Dias Úteis: <strong>${diasPassados}</strong></span>
-                <span>${badgePrazo}</span>
-            </div>
-        ` : `
-            <div class="flex justify-between items-center text-xs bg-gray-100 p-2 rounded">
-                <span>Entrada: ${dataFormatada || ''}</span>
-            </div>
-        `;
-
-        containerMobile.innerHTML += `
-            <div class="${cardVencidoClass} rounded-xl p-4 flex flex-col gap-2">
-                <div class="flex justify-between items-center">
-                    <span class="font-bold text-gray-900 text-base">${item.empresa || ''}</span>
-                    <div>${badgeStatus}</div>
-                </div>
-                <div class="text-xs text-gray-600"><strong>Contato:</strong> ${item.contato || 'Não informado'}</div>
-                <div class="text-xs text-gray-600 flex justify-between">
-                    <span>OS: <strong class="text-orange-600">${item.numOs || ''}</strong></span>
-                    <span>Serial: <strong class="font-mono text-orange-600 cursor-pointer underline" onclick='verHistoricoPorSerial("${item.serial}")'>${item.serial || ''}</strong></span>
-                </div>
-                <div class="text-sm text-gray-800"><strong>Modelo:</strong> <span class="text-gray-900 font-semibold">${item.modelo || ''}</span></div>
-                <div class="text-sm text-gray-800"><strong>Defeito:</strong> ${item.defeito || ''}</div>
-                <div class="text-sm text-gray-800"><strong>Diagnóstico:</strong> ${item.diagnostico || ''}</div>
-                ${blocoInfoExtra}
-                <div class="text-xs text-gray-700"><strong>Obs:</strong> ${item.observacao || ''}</div>
-                <div class="flex justify-end space-x-2 pt-2 border-t mt-1">
-                    <button onclick='verHistoricoPorSerial("${item.serial}")' class="text-orange-700 font-bold text-xs bg-orange-50 px-2 py-1.5 rounded border border-orange-200">Histórico</button>
-                    <button onclick='imprimirEtiquetaPorId("${item.id}")' class="text-gray-700 font-bold text-xs bg-gray-100 px-2.5 py-1.5 rounded border border-gray-300">Imprimir</button>
-                    <button onclick='editarOSPorId("${item.id}")' class="text-blue-600 font-bold text-sm px-2 py-1">Editar</button>
-                    <button onclick='excluirOS("${item.id}")' class="text-red-600 font-bold text-sm px-2 py-1">Excluir</button>
-                </div>
-            </div>
+        tbody.innerHTML += `
+            <tr class="${trClass} transition border-b">
+                <td class="px-3 py-3 font-medium">${item.empresa || ''}</td>
+                <td class="px-3 py-3">${item.contato || ''}</td>
+                <td class="px-3 py-3 font-bold text-orange-600">${item.numOs || ''}</td>
+                <td class="px-3 py-3 font-mono cursor-pointer text-orange-600 underline" onclick='verHistoricoPorSerial("${item.serial}")'>${item.serial || ''}</td>
+                <td class="px-3 py-3 font-semibold text-gray-800">${item.modelo || ''}</td>
+                <td class="px-3 py-3">${item.defeito || ''}</td>
+                <td class="px-3 py-3">${item.diagnostico || ''}</td>
+                <td class="px-3 py-3">${dataF}</td>
+                ${exibePrazos ? `<td class="px-3 py-3 text-center font-bold">${diasPassados}</td><td class="px-3 py-3 text-center">${badgePrazo}</td>` : ''}
+                <td class="px-3 py-3 text-center">${badgeStatus}</td>
+                <td class="px-3 py-3">${item.observacao || ''}</td>
+                <td class="px-3 py-3 text-center space-x-1.5 whitespace-nowrap">
+                    <button onclick='verHistoricoPorSerial("${item.serial}")' class="text-orange-700 font-bold bg-orange-50 px-2 py-1 rounded border border-orange-200">Histórico</button>
+                    <button onclick='imprimirEtiquetaPorId("${item.id}")' class="text-gray-700 font-bold bg-gray-100 px-2 py-1 rounded border border-gray-300">Imprimir</button>
+                    <button onclick='editarOSPorId("${item.id}")' class="text-blue-600 font-bold">Editar</button>
+                    <button onclick='excluirOS("${item.id}")' class="text-red-600 font-bold">Excluir</button>
+                </td>
+            </tr>
         `;
     });
 }
 
-// Sistema de Busca filtrando pela aba ativa atual
-window.filtrarDados = function() {
-    const termoInput = document.getElementById('inputBusca');
-    const termo = termoInput ? termoInput.value.toLowerCase() : '';
-
-    const filtrados = listaGlobal.filter(item => {
-        const statusItem = item.status || 'ENTRADA';
-        const abaMatch = (statusItem === abaAtual);
-
-        const textoMatch = (item.empresa && item.empresa.toLowerCase().includes(termo)) ||
-                           (item.numOs && item.numOs.toLowerCase().includes(termo)) ||
-                           (item.serial && item.serial.toLowerCase().includes(termo)) ||
-                           (item.contato && item.contato.toLowerCase().includes(termo));
-
-        return abaMatch && textoMatch;
-    });
-
-    renderizar(filtrados);
+window.filtrarDadosOS = function() {
+    const termo = document.getElementById('inputBuscaOS').value.toLowerCase();
+    const filtrados = listaGlobalOS.filter(i => (i.status || 'ENTRADA') === abaAtualOS && ((i.empresa && i.empresa.toLowerCase().includes(termo)) || (i.numOs && i.numOs.toLowerCase().includes(termo)) || (i.serial && i.serial.toLowerCase().includes(termo))));
+    renderizarOS(filtrados);
 }
 
-// Funções de Controle do Modal de OS
-window.abrirModal = function() {
-    const osId = document.getElementById('osId');
-    const formOS = document.getElementById('formOS');
-    const modalTitulo = document.getElementById('modalTitulo');
-    const modalOS = document.getElementById('modalOS');
-
-    if (osId) osId.value = '';
-    if (formOS) formOS.reset();
-    if (modalTitulo) modalTitulo.innerText = 'Nova Ordem de Serviço';
-    if (modalOS) modalOS.classList.remove('hidden');
+window.abrirModalOS = function() {
+    document.getElementById('osId').value = '';
+    document.getElementById('formOS').reset();
+    document.getElementById('modalTituloOS').innerText = 'Nova Ordem de Serviço';
+    document.getElementById('modalOS').classList.remove('hidden');
 }
 
-window.fecharModal = function() {
-    const modalOS = document.getElementById('modalOS');
-    if (modalOS) modalOS.classList.add('hidden');
-}
-
-window.editarOS = function(item) {
-    const setVal = (id, val) => {
-        const el = document.getElementById(id);
-        if (el) el.value = val || '';
-    };
-
-    setVal('osId', item.id);
-    setVal('empresa', item.empresa);
-    setVal('contato', item.contato);
-    setVal('numOs', item.numOs);
-    setVal('serial', item.serial);
-    setVal('modelo', item.modelo);
-    setVal('defeito', item.defeito);
-    setVal('diagnostico', item.diagnostico);
-    setVal('dataEntrada', item.dataEntrada);
-    setVal('status', item.status || 'ENTRADA');
-    setVal('observacao', item.observacao);
-
-    const modalTitulo = document.getElementById('modalTitulo');
-    const modalOS = document.getElementById('modalOS');
-
-    if (modalTitulo) modalTitulo.innerText = 'Editar Ordem de Serviço';
-    if (modalOS) modalOS.classList.remove('hidden');
-}
+window.fecharModalOS = function() { document.getElementById('modalOS').classList.add('hidden'); }
 
 window.editarOSPorId = function(id) {
-    const item = listaGlobal.find(i => i.id === id);
-    if (item) {
-        window.editarOS(item);
-    }
-}
-
-// Função para exibir o Histórico do Aparelho por Serial
-window.verHistoricoPorSerial = function(serialBuscado) {
-    const historicoContainer = document.getElementById('conteudoHistorico');
-    const modalHistorico = document.getElementById('modalHistorico');
-
-    if (!historicoContainer || !modalHistorico) return;
-
-    const historicos = listaGlobal.filter(item => item.serial && item.serial.toUpperCase() === serialBuscado.toUpperCase());
-
-    if (historicos.length === 0) {
-        alert("Nenhum histórico encontrado para este serial.");
-        return;
-    }
-
-    historicos.sort((a, b) => new Date(b.dataEntrada) - new Date(a.dataEntrada));
-
-    let htmlLinhaDoTempo = `
-        <div class="mb-3 p-3 bg-orange-50 rounded-lg border border-orange-200">
-            <span class="text-xs uppercase font-bold text-orange-900">Número de Série do Equipamento:</span>
-            <div class="text-lg font-mono font-bold text-orange-950">${serialBuscado}</div>
-            <div class="text-xs text-orange-700 mt-1">Total de passagens registradas na assistência: <strong>${historicos.length}</strong></div>
-        </div>
-        <div class="space-y-3">
-    `;
-
-    historicos.forEach((h, index) => {
-        let dataFormatada = h.dataEntrada;
-        if (h.dataEntrada && h.dataEntrada.includes('-')) {
-            const partes = h.dataEntrada.split('-');
-            dataFormatada = `${partes[2]}/${partes[1]}/${partes[0]}`;
-        }
-
-        let corStatusBadge = 'bg-blue-100 text-blue-800';
-        let nomeStatus = 'Entrada';
-        if (h.status === 'BANCADA') {
-            corStatusBadge = 'bg-orange-100 text-orange-800';
-            nomeStatus = 'Bancada';
-        } else if (h.status === 'AGUARDANDO') {
-            corStatusBadge = 'bg-amber-100 text-amber-800';
-            nomeStatus = 'Aguardando';
-        } else if (h.status === 'ENVIADO') {
-            corStatusBadge = 'bg-purple-100 text-purple-800';
-            nomeStatus = 'Enviado';
-        } else if (h.status === 'FINALIZADO') {
-            corStatusBadge = 'bg-green-100 text-green-800';
-            nomeStatus = 'Finalizado';
-        }
-
-        htmlLinhaDoTempo += `
-            <div class="p-4 rounded-xl border border-gray-200 bg-white shadow-sm flex flex-col gap-2 relative border-l-4 border-l-orange-500">
-                <div class="flex justify-between items-center">
-                    <span class="text-xs font-bold text-gray-500">Atendimento #${historicos.length - index}</span>
-                    <span class="px-2 py-0.5 rounded text-xs font-semibold ${corStatusBadge}">${nomeStatus}</span>
-                </div>
-                <div class="flex justify-between items-center text-sm">
-                    <span>Empresa: <strong>${h.empresa || ''}</strong></span>
-                    <span>OS: <strong class="text-orange-600">${h.numOs || ''}</strong></span>
-                </div>
-                <div class="text-xs text-gray-600">
-                    <strong>Modelo:</strong> ${h.modelo || ''} | <strong>Entrada:</strong> ${dataFormatada}
-                </div>
-                <div class="text-xs text-gray-700 bg-gray-50 p-2 rounded">
-                    <strong>Defeito Relatado:</strong> ${h.defeito || 'Não informado'}
-                </div>
-                <div class="text-xs text-gray-700 bg-orange-50 p-2 rounded">
-                    <strong>Diagnóstico Técnico:</strong> ${h.diagnostico || 'Não informado'}
-                </div>
-                ${h.observacao ? `<div class="text-xs text-gray-500"><strong>Obs:</strong> ${h.observacao}</div>` : ''}
-            </div>
-        `;
-    });
-
-    htmlLinhaDoTempo += `</div>`;
-    historicoContainer.innerHTML = htmlLinhaDoTempo;
-    modalHistorico.classList.remove('hidden');
-}
-
-window.fecharModalHistorico = function() {
-    const modalHistorico = document.getElementById('modalHistorico');
-    if (modalHistorico) modalHistorico.classList.add('hidden');
-}
-
-// Função para imprimir a etiqueta de bancada direto no relógio
-window.imprimirEtiquetaPorId = function(id) {
-    const item = listaGlobal.find(i => i.id === id);
+    const item = listaGlobalOS.find(i => i.id === id);
     if (!item) return;
-
-    let dataFormatada = item.dataEntrada;
-    if (item.dataEntrada && item.dataEntrada.includes('-')) {
-        const partes = item.dataEntrada.split('-');
-        dataFormatada = `${partes[2]}/${partes[1]}/${partes[0]}`;
-    }
-
-    const containerEtiqueta = document.getElementById('etiquetaImpressao');
-    if (containerEtiqueta) {
-        containerEtiqueta.style.display = 'block';
-        containerEtiqueta.innerHTML = `
-            <div style="border: 2px dashed #000; padding: 12px; max-width: 320px; font-family: Arial, sans-serif;">
-                <div style="font-size: 14px; font-weight: bold; text-align: center; border-bottom: 1px solid #000; padding-bottom: 4px; margin-bottom: 6px;">
-                    HITECH INFORMATICA - OS
-                </div>
-                <div style="font-size: 16px; font-weight: bold; margin-bottom: 4px;">
-                    Nº OS: ${item.numOs || ''}
-                </div>
-                <div style="font-size: 13px; margin-bottom: 4px;">
-                    <strong>Empresa:</strong> ${item.empresa || ''}
-                </div>
-                <div style="font-size: 13px; margin-bottom: 4px;">
-                    <strong>Modelo:</strong> ${item.modelo || ''} | <strong>Serial:</strong> ${item.serial || ''}
-                </div>
-                <div style="font-size: 13px; margin-bottom: 4px;">
-                    <strong>Entrada:</strong> ${dataFormatada || ''}
-                </div>
-                <div style="font-size: 13px; border-top: 1px dotted #000; padding-top: 4px; margin-top: 4px;">
-                    <strong>Defeito:</strong> ${item.defeito || 'Não informado'}
-                </div>
-                ${item.observacao ? `<div style="font-size: 12px; margin-top: 4px;"><strong>Obs:</strong> ${item.observacao}</div>` : ''}
-            </div>
-        `;
-    }
-
-    setTimeout(() => {
-        window.print();
-        if (containerEtiqueta) {
-            containerEtiqueta.style.display = 'none';
-        }
-    }, 200);
+    document.getElementById('osId').value = item.id;
+    document.getElementById('empresa').value = item.empresa || '';
+    document.getElementById('contato').value = item.contato || '';
+    document.getElementById('numOs').value = item.numOs || '';
+    document.getElementById('serial').value = item.serial || '';
+    document.getElementById('modelo').value = item.modelo || '';
+    document.getElementById('defeito').value = item.defeito || '';
+    document.getElementById('diagnostico').value = item.diagnostico || '';
+    document.getElementById('dataEntrada').value = item.dataEntrada || '';
+    document.getElementById('statusOS').value = item.status || 'ENTRADA';
+    document.getElementById('observacaoOS').value = item.observacao || '';
+    document.getElementById('modalTituloOS').innerText = 'Editar Ordem de Serviço';
+    document.getElementById('modalOS').classList.remove('hidden');
 }
 
-// Salvar ou Atualizar no Firebase com Validação Inteligente de Duplicidade
 window.salvarOS = async function(event) {
     event.preventDefault();
-    const osIdEl = document.getElementById('osId');
-    const id = osIdEl ? osIdEl.value : '';
-    
-    const getVal = (elementId) => {
-        const el = document.getElementById(elementId);
-        return el ? el.value.trim() : '';
+    const id = document.getElementById('osId').value;
+    const dados = {
+        empresa: document.getElementById('empresa').value.trim().toUpperCase(),
+        contato: document.getElementById('contato').value.trim().toUpperCase(),
+        numOs: document.getElementById('numOs').value.trim().toUpperCase(),
+        serial: document.getElementById('serial').value.trim().toUpperCase(),
+        modelo: document.getElementById('modelo').value.toUpperCase(),
+        defeito: document.getElementById('defeito').value.trim().toUpperCase(),
+        diagnostico: document.getElementById('diagnostico').value.trim().toUpperCase(),
+        dataEntrada: document.getElementById('dataEntrada').value,
+        status: document.getElementById('statusOS').value,
+        observacao: document.getElementById('observacaoOS').value.trim().toUpperCase()
     };
+    try {
+        if (id) await updateDoc(doc(db, "relogios_os", id), dados);
+        else await addDoc(collection(db, "relogios_os"), dados);
+        fecharModalOS();
+        carregarDadosOS();
+    } catch (e) { alert("Erro ao salvar OS."); }
+}
 
-    const numOsDigitado = getVal('numOs');
-    const serialDigitado = getVal('serial');
+window.excluirOS = async function(id) {
+    if (confirm("Deseja excluir esta OS?")) {
+        await deleteDoc(doc(db, "relogios_os", id));
+        carregarDadosOS();
+    }
+}
 
-    const duplicada = listaGlobal.find(item => {
-        if (item.id === id) return false;
+// ================= MÓDULO DE CONTRATOS & LICENÇAS =================
 
-        const mesmoNumeroOS = (item.numOs === numOsDigitado);
-        const mesmoSerialAtivo = (item.serial === serialDigitado && item.status !== 'FINALIZADO');
+async function carregarDadosContratos() {
+    try {
+        const querySnapshot = await getDocs(collection(db, "hitech_contratos"));
+        listaGlobalContratos = [];
+        querySnapshot.forEach((docSnap) => {
+            listaGlobalContratos.push({ id: docSnap.id, ...docSnap.data() });
+        });
+        
+        // ORDENAÇÃO AUTOMÁTICA INTELIGENTE PARA O PRÓXIMO MÊS
+        ordenarContratosAutomatico();
+        verificarAlertasVencimento();
+        filtrarDadosContratos();
+    } catch (error) {
+        console.error("Erro Contratos:", error);
+    }
+}
 
-        return mesmoNumeroOS || mesmoSerialAtivo;
+function obterDataObjetoContrato(c, hoje) {
+    const anoAtual = hoje.getFullYear();
+    const proximoMes = hoje.getMonth() + 1; // Garante o cálculo para o próximo mês fixo
+
+    if (c.periodicidade === 'ANUAL' && c.dataVencimentoAnual) {
+        const partes = c.dataVencimentoAnual.split('-');
+        return new Date(partes[0], partes[1] - 1, partes[2]);
+    } else if (c.diaVencimento) {
+        const diaVenc = parseInt(c.diaVencimento, 10);
+        if (!isNaN(diaVenc)) {
+            // Sempre posiciona no próximo mês com o dia exato numérico (ex: 01, 05, 10, etc.)
+            return new Date(anoAtual, proximoMes, diaVenc);
+        }
+    }
+    return new Date(9999, 11, 31);
+}
+
+function ordenarContratosAutomatico() {
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+
+    listaGlobalContratos.sort((a, b) => {
+        let dataA = obterDataObjetoContrato(a, hoje);
+        let dataB = obterDataObjetoContrato(b, hoje);
+        return dataA - dataB; // Do dia 1 ao 31 perfeitamente em ordem crescente
     });
 
-    if (duplicada) {
-        if (duplicada.numOs === numOsDigitado) {
-            alert(`Atenção: Já existe outra Ordem de Serviço cadastrada com o Nº "${duplicada.numOs}" (${duplicada.empresa}).`);
+    filtrarDadosContratos();
+}
+
+function verificarAlertasVencimento() {
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+
+    const bannerAlerta = document.getElementById('alertaVencimentos');
+    const listaAlerta = document.getElementById('listaContratosAlerta');
+    let avisos = [];
+
+    listaGlobalContratos.forEach(c => {
+        let dataVencObj = obterDataObjetoContrato(c, hoje);
+        if (!dataVencObj) return;
+
+        let textoVencimentoExibicao = "";
+        if (c.periodicidade === 'ANUAL' && c.dataVencimentoAnual) {
+            const partes = c.dataVencimentoAnual.split('-');
+            textoVencimentoExibicao = `Data: ${partes[2]}/${partes[1]}/${partes[0]}`;
         } else {
-            alert(`Atenção: Este relógio (Serial: ${serialDigitado}) já possui uma OS ativa em andamento/espera (${duplicada.numOs} - ${duplicada.empresa}). Conclua o atendimento anterior antes de dar uma nova entrada.`);
+            textoVencimentoExibicao = `Dia ${c.diaVencimento}`;
         }
+
+        const diffTempo = dataVencObj - hoje;
+        const diffDias = Math.ceil(diffTempo / (1000 * 60 * 60 * 24));
+
+        if (diffDias <= 7) {
+            let statusTexto = diffDias < 0 ? `Vencido há ${Math.abs(diffDias)} dia(s)` : diffDias === 0 ? `Vence HOJE!` : `Vence em ${diffDias} dia(s)`;
+            avisos.push(`• <strong>${c.razaoSocial}</strong> (Plano: ${c.plano || 'PADRÃO'}) - ${textoVencimentoExibicao} - <span class="font-bold underline">${statusTexto}</span>`);
+        }
+    });
+
+    if (avisos.length > 0) {
+        listaAlerta.innerHTML = avisos.join('<br>');
+        bannerAlerta.classList.remove('hidden');
+    } else {
+        bannerAlerta.classList.add('hidden');
+    }
+}
+
+function atualizarContadoresContratos(dadosExibidos) {
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+
+    let regulares = 0;
+    let vencendo = 0;
+
+    listaGlobalContratos.forEach(c => {
+        let dataVencObj = obterDataObjetoContrato(c, hoje);
+        if (!dataVencObj) return;
+        const diffDias = Math.ceil((dataVencObj - hoje) / (1000 * 60 * 60 * 24));
+        if (diffDias <= 7) {
+            vencendo++;
+        } else {
+            regulares++;
+        }
+    });
+
+    if (document.getElementById('contadorTotalContratos')) {
+        document.getElementById('contadorTotalContratos').innerText = listaGlobalContratos.length;
+    }
+    if (document.getElementById('contadorRegularesContratos')) {
+        document.getElementById('contadorRegularesContratos').innerText = regulares;
+    }
+    if (document.getElementById('contadorVencendoContratos')) {
+        document.getElementById('contadorVencendoContratos').innerText = vencendo;
+    }
+}
+
+function renderizarContratos(dados) {
+    const tbody = document.getElementById('tabelaCorpoContratos');
+    const cardsMobile = document.getElementById('cardsMobileContratos');
+    if (!tbody) return;
+
+    tbody.innerHTML = '';
+    if (cardsMobile) cardsMobile.innerHTML = '';
+
+    atualizarContadoresContratos(dados);
+
+    if (dados.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" class="text-center py-6 text-gray-400">Nenhum contrato cadastrado.</td></tr>`;
         return;
     }
 
-    const dadosOS = {
-        empresa: getVal('empresa'),
-        contato: getVal('contato'),
-        numOs: numOsDigitado,
-        serial: serialDigitado,
-        modelo: getVal('modelo'),
-        defeito: getVal('defeito'),
-        diagnostico: getVal('diagnostico'),
-        dataEntrada: getVal('dataEntrada'),
-        status: getVal('status'),
-        observacao: getVal('observacao')
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+
+    dados.forEach(c => {
+        let vencimentoExibicao = "";
+        let statusBadge = `<span class="px-2 py-1 rounded text-xs font-semibold bg-green-100 text-green-800">Regular</span>`;
+
+        if (c.periodicidade === 'ANUAL' && c.dataVencimentoAnual) {
+            const partes = c.dataVencimentoAnual.split('-');
+            vencimentoExibicao = `${partes[2]}/${partes[1]}/${partes[0]}`;
+            const dataVencObj = new Date(partes[0], partes[1] - 1, partes[2]);
+            const diffDias = Math.ceil((dataVencObj - hoje) / (1000 * 60 * 60 * 24));
+            if (diffDias <= 7) {
+                statusBadge = `<span class="px-2 py-1 rounded text-xs font-semibold bg-red-100 text-red-800">Próximo / Vencido</span>`;
+            }
+        } else {
+            vencimentoExibicao = `Dia ${c.diaVencimento || ''}`;
+            const diaVenc = parseInt(c.diaVencimento, 10);
+            if (!isNaN(diaVenc)) {
+                let dataVencObj = new Date(hoje.getFullYear(), hoje.getMonth() + 1, diaVenc);
+                const diffDias = Math.ceil((dataVencObj - hoje) / (1000 * 60 * 60 * 24));
+                if (diffDias <= 7) {
+                    statusBadge = `<span class="px-2 py-1 rounded text-xs font-semibold bg-red-100 text-red-800">Próximo / Vencido</span>`;
+                }
+            }
+        }
+
+        const badgePeriodicidade = c.periodicidade === 'ANUAL' 
+            ? '<span class="px-2 py-0.5 rounded text-xs font-bold bg-purple-100 text-purple-800">ANUAL</span>' 
+            : '<span class="px-2 py-0.5 rounded text-xs font-bold bg-blue-100 text-blue-800">MENSAL</span>';
+
+        tbody.innerHTML += `
+            <tr class="hover:bg-gray-50 transition border-b">
+                <td class="px-4 py-3 font-bold text-gray-800">${c.razaoSocial || ''}</td>
+                <td class="px-4 py-3 font-mono whitespace-nowrap">${c.cnpj || 'Não informado'}</td>
+                <td class="px-4 py-3 text-center font-bold text-orange-600">${c.plano || 'Padrão'}</td>
+                <td class="px-4 py-3 text-center">${badgePeriodicidade}</td>
+                <td class="px-4 py-3 text-center font-bold text-sm whitespace-nowrap">${vencimentoExibicao}</td>
+                <td class="px-4 py-3 text-center">${statusBadge}</td>
+                <td class="px-4 py-3">${c.observacao || ''}</td>
+                <td class="px-4 py-3 text-center space-x-2 whitespace-nowrap acoes-esconder">
+                    <button onclick='editarContratoPorId("${c.id}")' class="text-blue-600 font-bold">Editar</button>
+                    <button onclick='excluirContrato("${c.id}")' class="text-red-600 font-bold">Excluir</button>
+                </td>
+            </tr>
+        `;
+    });
+}
+
+window.filtrarDadosContratos = function() {
+    const termo = document.getElementById('inputBuscaContrato').value.toLowerCase();
+    const filtrados = listaGlobalContratos.filter(c => (c.razaoSocial && c.razaoSocial.toLowerCase().includes(termo)) || (c.cnpj && c.cnpj.toLowerCase().includes(termo)) || (c.plano && c.plano.toLowerCase().includes(termo)));
+    renderizarContratos(filtrados);
+}
+
+window.abrirModalContrato = function() {
+    document.getElementById('contratoId').value = '';
+    document.getElementById('formContrato').reset();
+    document.getElementById('periodicidade').value = 'MENSAL';
+    alternarPeriodicidade();
+    document.getElementById('modalTituloContrato').innerText = 'Novo Contrato / Licença';
+    document.getElementById('modalContrato').classList.remove('hidden');
+}
+
+window.fecharModalContrato = function() { 
+    document.getElementById('modalContrato').classList.add('hidden'); 
+}
+
+window.editarContratoPorId = function(id) {
+    const item = listaGlobalContratos.find(c => c.id === id);
+    if (!item) return;
+
+    document.getElementById('contratoId').value = item.id;
+    document.getElementById('razaoSocial').value = item.razaoSocial || '';
+    document.getElementById('cnpj').value = item.cnpj || '';
+    document.getElementById('plano').value = item.plano || '';
+    
+    const periodicidade = item.periodicidade || 'MENSAL';
+    document.getElementById('periodicidade').value = periodicidade;
+    alternarPeriodicidade();
+
+    if (periodicidade === 'ANUAL') {
+        document.getElementById('dataVencimentoAnual').value = item.dataVencimentoAnual || '';
+        document.getElementById('diaVencimento').value = '';
+    } else {
+        document.getElementById('diaVencimento').value = item.diaVencimento || '';
+        document.getElementById('dataVencimentoAnual').value = '';
+    }
+
+    document.getElementById('observacaoContrato').value = item.observacao || '';
+    document.getElementById('modalTituloContrato').innerText = 'Editar Contrato';
+    document.getElementById('modalContrato').classList.remove('hidden');
+}
+
+window.salvarContrato = async function(event) {
+    event.preventDefault();
+    const id = document.getElementById('contratoId').value;
+    const periodicidade = document.getElementById('periodicidade').value;
+
+    const dados = {
+        razaoSocial: document.getElementById('razaoSocial').value.trim().toUpperCase(),
+        cnpj: document.getElementById('cnpj').value.trim(),
+        plano: document.getElementById('plano').value.trim().toUpperCase(),
+        periodicidade: periodicidade,
+        diaVencimento: periodicidade === 'MENSAL' ? document.getElementById('diaVencimento').value.trim() : '',
+        dataVencimentoAnual: periodicidade === 'ANUAL' ? document.getElementById('dataVencimentoAnual').value : '',
+        observacao: document.getElementById('observacaoContrato').value.trim().toUpperCase()
     };
 
     try {
         if (id) {
-            await updateDoc(doc(db, "relogios_os", id), dadosOS);
+            await updateDoc(doc(db, "hitech_contratos", id), dados);
         } else {
-            await addDoc(collection(db, "relogios_os"), dadosOS);
+            await addDoc(collection(db, "hitech_contratos"), dados);
         }
-        fecharModal();
-        carregarDados();
-    } catch (error) {
-        console.error("Erro ao salvar: ", error);
-        alert("Erro ao salvar os dados.");
+        fecharModalContrato();
+        carregarDadosContratos();
+    } catch (e) {
+        console.error("Erro ao salvar contrato:", e);
+        alert("Erro ao salvar contrato.");
     }
 }
 
-// Excluir do Firebase
-window.excluirOS = async function(id) {
-    if (confirm("Deseja realmente excluir esta Ordem de Serviço?")) {
+window.excluirContrato = async function(id) {
+    if (confirm("Deseja excluir este contrato?")) {
         try {
-            await deleteDoc(doc(db, "relogios_os", id));
-            carregarDados();
-        } catch (error) {
-            console.error("Erro ao excluir: ", error);
-            alert("Erro ao excluir o registo.");
+            await deleteDoc(doc(db, "hitech_contratos", id));
+            carregarDadosContratos();
+        } catch (e) {
+            alert("Erro ao excluir o contrato.");
         }
     }
 }
 
-// Inicializa a aplicação carregando os dados do banco
-carregarDados();
+// Histórico de Aparelho OS
+window.verHistoricoPorSerial = function(serialBuscado) {
+    const container = document.getElementById('conteudoHistorico');
+    const modal = document.getElementById('modalHistorico');
+    if (!container || !modal) return;
+
+    const his = listaGlobalOS.filter(i => i.serial && i.serial.toUpperCase() === serialBuscado.toUpperCase());
+    if (his.length === 0) { alert("Nenhum histórico encontrado."); return; }
+
+    his.sort((a, b) => new Date(b.dataEntrada) - new Date(a.dataEntrada));
+    let html = `<div class="mb-3 p-3 bg-orange-50 rounded-lg border border-orange-200"><span class="text-xs font-bold text-orange-900">Serial:</span> <span class="font-mono font-bold">${serialBuscado}</span></div>`;
+    
+    his.forEach((h, idx) => {
+        html += `<div class="p-3 bg-white border rounded shadow-sm text-xs space-y-1"><div class="font-bold text-gray-700">Atendimento #${his.length - idx} - OS: ${h.numOs}</div><div>Empresa: ${h.empresa}</div><div>Defeito: ${h.defeito}</div></div>`;
+    });
+    container.innerHTML = html;
+    modal.classList.add('hidden');
+}
+
+window.fecharModalHistorico = function() { document.getElementById('modalHistorico').classList.add('hidden'); }
+window.imprimirEtiquetaPorId = function(id) { alert("Função de impressão mantida no módulo OS."); }

@@ -302,7 +302,6 @@ async function carregarDadosContratos() {
             listaGlobalContratos.push({ id: docSnap.id, ...docSnap.data() });
         });
         
-        // ORDENAÇÃO AUTOMÁTICA INTELIGENTE PARA O PRÓXIMO MÊS
         ordenarContratosAutomatico();
         verificarAlertasVencimento();
         filtrarDadosContratos();
@@ -313,7 +312,7 @@ async function carregarDadosContratos() {
 
 function obterDataObjetoContrato(c, hoje) {
     const anoAtual = hoje.getFullYear();
-    const proximoMes = hoje.getMonth() + 1; // Garante o cálculo para o próximo mês fixo
+    const proximoMes = hoje.getMonth() + 1;
 
     if (c.periodicidade === 'ANUAL' && c.dataVencimentoAnual) {
         const partes = c.dataVencimentoAnual.split('-');
@@ -321,7 +320,6 @@ function obterDataObjetoContrato(c, hoje) {
     } else if (c.diaVencimento) {
         const diaVenc = parseInt(c.diaVencimento, 10);
         if (!isNaN(diaVenc)) {
-            // Sempre posiciona no próximo mês com o dia exato numérico (ex: 01, 05, 10, etc.)
             return new Date(anoAtual, proximoMes, diaVenc);
         }
     }
@@ -335,7 +333,7 @@ function ordenarContratosAutomatico() {
     listaGlobalContratos.sort((a, b) => {
         let dataA = obterDataObjetoContrato(a, hoje);
         let dataB = obterDataObjetoContrato(b, hoje);
-        return dataA - dataB; // Do dia 1 ao 31 perfeitamente em ordem crescente
+        return dataA - dataB;
     });
 
     filtrarDadosContratos();
@@ -409,12 +407,9 @@ function atualizarContadoresContratos(dadosExibidos) {
 
 function renderizarContratos(dados) {
     const tbody = document.getElementById('tabelaCorpoContratos');
-    const cardsMobile = document.getElementById('cardsMobileContratos');
     if (!tbody) return;
 
     tbody.innerHTML = '';
-    if (cardsMobile) cardsMobile.innerHTML = '';
-
     atualizarContadoresContratos(dados);
 
     if (dados.length === 0) {
@@ -461,7 +456,7 @@ function renderizarContratos(dados) {
                 <td class="px-4 py-3 text-center">${badgePeriodicidade}</td>
                 <td class="px-4 py-3 text-center font-bold text-sm whitespace-nowrap">${vencimentoExibicao}</td>
                 <td class="px-4 py-3 text-center">${statusBadge}</td>
-                <td class="px-4 py-3">${c.observacao || ''}</td>
+                <td class="px-4 py-3 coluna-obs">${c.observacao || ''}</td>
                 <td class="px-4 py-3 text-center space-x-2 whitespace-nowrap acoes-esconder">
                     <button onclick='editarContratoPorId("${c.id}")' class="text-blue-600 font-bold">Editar</button>
                     <button onclick='excluirContrato("${c.id}")' class="text-red-600 font-bold">Excluir</button>
@@ -469,6 +464,20 @@ function renderizarContratos(dados) {
             </tr>
         `;
     });
+}
+
+// Função inteligente que aplica ou remove a regra de ocultar observações e dispara a impressão
+window.acionarImpressao = function() {
+    const tabelaPrincipal = document.getElementById('tabelaContratosPrincipal');
+    const incluirObs = document.getElementById('chkIncluirObs').checked;
+
+    if (!incluirObs) {
+        tabelaPrincipal.classList.add('tabela-sem-obs');
+    } else {
+        tabelaPrincipal.classList.remove('tabela-sem-obs');
+    }
+
+    window.print();
 }
 
 window.filtrarDadosContratos = function() {
@@ -565,7 +574,7 @@ window.verHistoricoPorSerial = function(serialBuscado) {
     const his = listaGlobalOS.filter(i => i.serial && i.serial.toUpperCase() === serialBuscado.toUpperCase());
     if (his.length === 0) { alert("Nenhum histórico encontrado."); return; }
 
-    his.sort((a, b) => new Date(b.dataEntrada) - new Date(a.dataEntrada));
+    his.sort((a, b) => new Date(b.dataEntrada) - new Date(dataEntrada));
     let html = `<div class="mb-3 p-3 bg-orange-50 rounded-lg border border-orange-200"><span class="text-xs font-bold text-orange-900">Serial:</span> <span class="font-mono font-bold">${serialBuscado}</span></div>`;
     
     his.forEach((h, idx) => {

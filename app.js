@@ -17,7 +17,6 @@ let listaGlobalOS = [];
 let listaGlobalContratos = [];
 let abaAtualOS = "ENTRADA";
 
-// Vincula os botões da tela inicial assim que o DOM estiver carregado
 document.addEventListener("DOMContentLoaded", () => {
     const btnOS = document.getElementById('btnModuloOS');
     const btnContratos = document.getElementById('btnModuloContratos');
@@ -30,7 +29,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 });
 
-// Função para aplicar a Máscara de CNPJ automaticamente
 window.aplicarMascaraCNPJ = function(input) {
     let v = input.value.replace(/\D/g, '');
     if (v.length > 14) v = v.substring(0, 14);
@@ -48,7 +46,6 @@ window.aplicarMascaraCNPJ = function(input) {
     }
 }
 
-// Alternar visibilidade dos campos no Modal de Contrato (Mensal vs Anual)
 window.alternarPeriodicidade = function() {
     const tipo = document.getElementById('periodicidade').value;
     const blocoDia = document.getElementById('blocoDiaVencimento');
@@ -71,7 +68,6 @@ window.alternarPeriodicidade = function() {
     }
 }
 
-// Controle de Navegação entre Módulos
 function entrarSistema(modulo) {
     const tela = document.getElementById('telaAbertura');
     const modOS = document.getElementById('moduloOS');
@@ -220,7 +216,7 @@ function renderizarOS(dados) {
                 <td class="px-3 py-3">${item.observacao || ''}</td>
                 <td class="px-3 py-3 text-center space-x-1.5 whitespace-nowrap">
                     <button onclick='verHistoricoPorSerial("${item.serial}")' class="text-orange-700 font-bold bg-orange-50 px-2 py-1 rounded border border-orange-200">Histórico</button>
-                    <button onclick='imprimirEtiquetaPorId("${item.id}")' class="text-gray-700 font-bold bg-gray-100 px-2 py-1 rounded border border-gray-300">Imprimir</button>
+                    <button onclick='imprimirOSPorId("${item.id}")' class="text-gray-700 font-bold bg-gray-100 px-2 py-1 rounded border border-gray-300">Imprimir</button>
                     <button onclick='editarOSPorId("${item.id}")' class="text-blue-600 font-bold">Editar</button>
                     <button onclick='excluirOS("${item.id}")' class="text-red-600 font-bold">Excluir</button>
                 </td>
@@ -235,9 +231,26 @@ window.filtrarDadosOS = function() {
     renderizarOS(filtrados);
 }
 
+window.verificarStatusEnviado = function(select) {
+    const bloco = document.getElementById('blocoDataEnvio');
+    const inputData = document.getElementById('dataEnvio');
+    if (select.value === 'ENVIADO') {
+        bloco.classList.remove('hidden');
+        inputData.required = true;
+        if (!inputData.value) {
+            inputData.value = new Date().toISOString().split('T')[0];
+        }
+    } else {
+        bloco.classList.add('hidden');
+        inputData.required = false;
+        inputData.value = '';
+    }
+}
+
 window.abrirModalOS = function() {
     document.getElementById('osId').value = '';
     document.getElementById('formOS').reset();
+    document.getElementById('blocoDataEnvio').classList.add('hidden');
     document.getElementById('modalTituloOS').innerText = 'Nova Ordem de Serviço';
     document.getElementById('modalOS').classList.remove('hidden');
 }
@@ -258,6 +271,13 @@ window.editarOSPorId = function(id) {
     document.getElementById('dataEntrada').value = item.dataEntrada || '';
     document.getElementById('statusOS').value = item.status || 'ENTRADA';
     document.getElementById('observacaoOS').value = item.observacao || '';
+    
+    const selectStatus = document.getElementById('statusOS');
+    verificarStatusEnviado(selectStatus);
+    if (item.status === 'ENVIADO' && item.dataEnvio) {
+        document.getElementById('dataEnvio').value = item.dataEnvio;
+    }
+
     document.getElementById('modalTituloOS').innerText = 'Editar Ordem de Serviço';
     document.getElementById('modalOS').classList.remove('hidden');
 }
@@ -265,6 +285,7 @@ window.editarOSPorId = function(id) {
 window.salvarOS = async function(event) {
     event.preventDefault();
     const id = document.getElementById('osId').value;
+    const status = document.getElementById('statusOS').value;
     const dados = {
         empresa: document.getElementById('empresa').value.trim().toUpperCase(),
         contato: document.getElementById('contato').value.trim().toUpperCase(),
@@ -274,7 +295,8 @@ window.salvarOS = async function(event) {
         defeito: document.getElementById('defeito').value.trim().toUpperCase(),
         diagnostico: document.getElementById('diagnostico').value.trim().toUpperCase(),
         dataEntrada: document.getElementById('dataEntrada').value,
-        status: document.getElementById('statusOS').value,
+        status: status,
+        dataEnvio: status === 'ENVIADO' ? document.getElementById('dataEnvio').value : '',
         observacao: document.getElementById('observacaoOS').value.trim().toUpperCase()
     };
     try {
@@ -290,6 +312,12 @@ window.excluirOS = async function(id) {
         await deleteDoc(doc(db, "relogios_os", id));
         carregarDadosOS();
     }
+}
+
+window.imprimirOSPorId = function(id) {
+    const item = listaGlobalOS.find(i => i.id === id);
+    if (!item) return;
+    window.print();
 }
 
 // ================= MÓDULO DE CONTRATOS & LICENÇAS =================
@@ -466,7 +494,6 @@ function renderizarContratos(dados) {
     });
 }
 
-// Função inteligente que aplica ou remove a regra de ocultar observações e dispara a impressão
 window.acionarImpressao = function() {
     const tabelaPrincipal = document.getElementById('tabelaContratosPrincipal');
     const incluirObs = document.getElementById('chkIncluirObs').checked;
@@ -565,7 +592,6 @@ window.excluirContrato = async function(id) {
     }
 }
 
-// Histórico de Aparelho OS
 window.verHistoricoPorSerial = function(serialBuscado) {
     const container = document.getElementById('conteudoHistorico');
     const modal = document.getElementById('modalHistorico');
@@ -574,15 +600,14 @@ window.verHistoricoPorSerial = function(serialBuscado) {
     const his = listaGlobalOS.filter(i => i.serial && i.serial.toUpperCase() === serialBuscado.toUpperCase());
     if (his.length === 0) { alert("Nenhum histórico encontrado."); return; }
 
-    his.sort((a, b) => new Date(b.dataEntrada) - new Date(dataEntrada));
+    his.sort((a, b) => new Date(b.dataEntrada) - new Date(a.dataEntrada));
     let html = `<div class="mb-3 p-3 bg-orange-50 rounded-lg border border-orange-200"><span class="text-xs font-bold text-orange-900">Serial:</span> <span class="font-mono font-bold">${serialBuscado}</span></div>`;
     
     his.forEach((h, idx) => {
         html += `<div class="p-3 bg-white border rounded shadow-sm text-xs space-y-1"><div class="font-bold text-gray-700">Atendimento #${his.length - idx} - OS: ${h.numOs}</div><div>Empresa: ${h.empresa}</div><div>Defeito: ${h.defeito}</div></div>`;
     });
     container.innerHTML = html;
-    modal.classList.add('hidden');
+    modal.classList.remove('hidden');
 }
 
 window.fecharModalHistorico = function() { document.getElementById('modalHistorico').classList.add('hidden'); }
-window.imprimirEtiquetaPorId = function(id) { alert("Função de impressão mantida no módulo OS."); }

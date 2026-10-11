@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HiTech Informática - Relatório de Contratos</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @media print {
+            @page { size: A4 portrait; margin: 10mm; }
+            body * { visibility: hidden; }
+            #moduloContratos, #moduloContratos * { visibility: visible; }
+            header button, #inputBuscaContrato, .acoes-esconder, button, label[for="chkIncluirObs"], #blocoNotasGeraisContratos { display: none !important; }
+            #moduloContratos { position: absolute; left: 0; top: 0; width: 100%; padding: 0 !important; margin: 0 !important; background: #fff; }
+            #tabelaContratosPrincipal { width: 100% !important; font-size: 9px !important; border-collapse: collapse !important; }
+            #tabelaContratosPrincipal th, #tabelaContratosPrincipal td { padding: 4px 6px !important; border: 1px solid #cbd5e1 !important; }
+            #tabelaContratosPrincipal th { background-color: #f1f5f9 !important; color: #000 !important; }
+            .tabela-sem-obs .coluna-obs { display: none !important; }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans">
+
+    <div id="moduloContratos" class="container mx-auto p-4 max-w-full">
+        <!-- Cabeçalho Contratos -->
+        <header class="flex flex-col md:flex-row justify-between items-center mb-6 bg-white p-4 rounded-lg shadow gap-4 border-l-4 border-orange-500">
+            <div>
+                <div class="flex items-center gap-3">
+                    <a href="index.html" class="text-xs bg-gray-200 hover:bg-gray-300 px-3 py-1.5 rounded font-bold text-gray-700 acoes-esconder no-underline">← Menu Inicial</a>
+                    <h1 class="text-xl md:text-2xl font-bold text-gray-800">HiTech Informática - Relatório de Contratos</h1>
+                </div>
+                <div class="flex flex-wrap gap-4 mt-2 text-xs md:text-sm text-gray-600">
+                    <p>Total: <span id="contadorTotalContratos" class="font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded">0</span></p>
+                    <p>Regulares: <span id="contadorRegularesContratos" class="font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded">0</span></p>
+                    <p>Próximos / Vencidos: <span id="contadorVencendoContratos" class="font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded">0</span></p>
+                </div>
+            </div>
+            
+            <div class="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto acoes-esconder">
+                <label for="chkIncluirObs" class="flex items-center gap-1.5 text-xs font-semibold text-gray-700 bg-gray-50 px-3 py-2 rounded-lg border cursor-pointer select-none">
+                    <input type="checkbox" id="chkIncluirObs" class="w-4 h-4 text-orange-600 rounded focus:ring-orange-500">
+                    Incluir Observação na Impressão
+                </label>
+                <button onclick="acionarImpressao()" class="bg-gray-700 text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition font-medium shadow text-sm flex items-center justify-center gap-2 w-full sm:w-auto cursor-pointer">
+                    🖨️ Imprimir
+                </button>
+                <button onclick="abrirModalContrato()" class="bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition font-medium shadow text-sm w-full sm:w-auto text-center cursor-pointer">
+                    + Novo Contrato
+                </button>
+            </div>
+        </header>
+
+        <!-- Banner de Alerta Automático -->
+        <div id="alertaVencimentos" class="mb-6 hidden bg-red-50 border-l-4 border-red-600 p-4 rounded-lg shadow acoes-esconder">
+            <div class="flex items-center">
+                <div class="text-red-600 text-2xl mr-3">⚠️</div>
+                <div>
+                    <h3 class="text-sm font-bold text-red-800 uppercase tracking-wide">Atenção: Contratos Próximos do Vencimento ou Vencidos!</h3>
+                    <div id="listaContratosAlerta" class="text-xs text-red-700 mt-1 space-y-1"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bloco de Observações e Pesquisa -->
+        <div class="mb-6 bg-white p-4 rounded-lg shadow acoes-esconder space-y-4">
+            <div id="blocoNotasGeraisContratos">
+                <div class="flex justify-between items-center mb-1.5">
+                    <label for="txtNotasGerais" class="block text-xs font-bold uppercase text-gray-700 flex items-center gap-1.5">
+                        📝 Bloco de Notas e Observações Gerais das Empresas (Sincronizado)
+                    </label>
+                    <span id="statusSalvarNotas" class="text-[11px] font-bold text-gray-400"></span>
+                </div>
+                <textarea id="txtNotasGerais" rows="3" placeholder="Escreva aqui observações gerais, recados ou anotações importantes..." class="w-full p-3 border-2 rounded-lg text-sm bg-orange-50/40 focus:bg-white focus:border-orange-500 outline-none transition uppercase mb-2"></textarea>
+                <div class="flex justify-end">
+                    <button onclick="salvarNotasGeraisNuvem()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg font-semibold text-xs transition shadow flex items-center gap-1.5 cursor-pointer">
+                        💾 Salvar Observações na Nuvem
+                    </button>
+                </div>
+            </div>
+
+            <div class="border-t pt-4 w-full md:w-96">
+                <input type="text" id="inputBuscaContrato" placeholder="Pesquisar por Razão Social, CNPJ ou Plano..." onkeyup="filtrarDadosContratos()" class="w-full p-2 border rounded-lg bg-white text-sm focus:ring-2 focus:ring-orange-500 outline-none uppercase">
+            </div>
+        </div>
+
+        <!-- Tabela Contratos -->
+        <div class="bg-white rounded-lg shadow overflow-hidden">
+            <div class="overflow-x-auto">
+                <table id="tabelaContratosPrincipal" class="min-w-full divide-y divide-gray-200 text-xs">
+                    <thead class="bg-gray-50 text-gray-700 uppercase">
+                        <tr>
+                            <th class="px-4 py-3 text-left">Razão Social</th>
+                            <th class="px-4 py-3 text-left whitespace-nowrap">CNPJ</th>
+                            <th class="px-4 py-3 text-center">Plano / Sistema</th>
+                            <th class="px-4 py-3 text-center">Periodicidade</th>
+                            <th class="px-4 py-3 text-center whitespace-nowrap">Vencimento</th>
+                            <th class="px-4 py-3 text-center">Status Licença</th>
+                            <th class="px-4 py-3 text-left coluna-obs">Observação</th>
+                            <th class="px-4 py-3 text-center acoes-esconder">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabelaCorpoContratos" class="divide-y divide-gray-200 text-gray-600 uppercase"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Contrato -->
+    <div id="modalContrato" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-xl max-w-lg w-full p-6 shadow-2xl border-t-4 border-orange-500">
+            <h2 id="modalTituloContrato" class="text-xl font-bold text-gray-800 mb-4 pb-2 border-b">Novo Contrato / Licença</h2>
+            <form id="formContrato" onsubmit="salvarContrato(event)" class="space-y-4">
+                <input type="hidden" id="contratoId">
+                <div>
+                    <label class="block text-xs font-bold uppercase text-gray-700 mb-1">Razão Social *</label>
+                    <input type="text" id="razaoSocial" required class="w-full p-2.5 border-2 rounded-lg text-sm bg-gray-50 focus:bg-white focus:border-orange-500 outline-none transition uppercase">
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-gray-700 mb-1">CNPJ</label>
+                        <input type="text" id="cnpj" maxlength="18" placeholder="00.000.000/0000-00" oninput="aplicarMascaraCNPJ(this)" class="w-full p-2.5 border-2 rounded-lg text-sm bg-gray-50 focus:bg-white focus:border-orange-500 outline-none transition font-mono">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-gray-700 mb-1">Plano / Sistema *</label>
+                        <input type="text" id="plano" required placeholder="Ex: PRO, BASIC, ULTIMATE..." class="w-full p-2.5 border-2 rounded-lg text-sm bg-gray-50 focus:bg-white focus:border-orange-500 outline-none transition uppercase font-bold text-orange-600">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold uppercase text-gray-700 mb-1">Periodicidade *</label>
+                    <select id="periodicidade" required onchange="alternarPeriodicidade()" class="w-full p-2.5 border-2 rounded-lg bg-gray-50 focus:bg-white focus:border-orange-500 outline-none transition text-sm font-bold text-gray-800">
+                        <option value="MENSAL">MENSAL</option>
+                        <option value="ANUAL">ANUAL</option>
+                    </select>
+                </div>
+
+                <div id="blocoDiaVencimento">
+                    <label class="block text-xs font-bold uppercase text-gray-700 mb-1">Dia do Vencimento (1 a 31) *</label>
+                    <input type="number" id="diaVencimento" min="1" max="31" class="w-full p-2.5 border-2 rounded-lg text-sm bg-gray-50 focus:bg-white focus:border-orange-500 outline-none transition font-bold text-gray-800">
+                </div>
+
+                <div id="blocoDataVencimento" class="hidden">
+                    <label class="block text-xs font-bold uppercase text-gray-700 mb-1">Data de Vencimento (Anual) *</label>
+                    <input type="date" id="dataVencimentoAnual" class="w-full p-2.5 border-2 rounded-lg text-sm bg-gray-50 focus:bg-white focus:border-orange-500 outline-none transition font-bold text-gray-800">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold uppercase text-gray-700 mb-1">Observação</label>
+                    <textarea id="observacaoContrato" rows="3" placeholder="Informações do contrato ou licença..." class="w-full p-2.5 border-2 rounded-lg text-sm bg-gray-50 focus:bg-white focus:border-orange-500 outline-none transition uppercase"></textarea>
+                </div>
+                <div class="flex justify-end gap-3 pt-4 border-t">
+                    <button type="button" onclick="fecharModalContrato()" class="px-5 py-2.5 border rounded-xl text-gray-600 hover:bg-gray-100 font-medium text-sm transition cursor-pointer">Cancelar</button>
+                    <button type="submit" class="px-6 py-2.5 bg-orange-500 text-white rounded-xl hover:bg-orange-600 font-bold text-sm shadow transition cursor-pointer">Salvar Contrato</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script type="module" src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HiTech Informática - Controle de OS</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @media print {
+            body * { visibility: hidden; }
+            #etiquetaImpressao, #etiquetaImpressao * { visibility: visible !important; }
+            #etiquetaImpressao {
+                display: block !important;
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 80mm;
+                padding: 5mm;
+                font-family: monospace;
+                background: white;
+                color: black;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans">
+
+    <div class="container mx-auto p-4 max-w-full">
+        <!-- Cabeçalho OS -->
+        <header class="flex flex-col md:flex-row justify-between items-center mb-6 bg-white p-4 rounded-lg shadow gap-4 border-l-4 border-orange-500">
+            <div>
+                <div class="flex items-center gap-3">
+                    <a href="index.html" class="text-xs bg-gray-200 hover:bg-gray-300 px-3 py-1.5 rounded font-bold text-gray-700 no-underline">← Menu Inicial</a>
+                    <h1 class="text-2xl font-bold text-gray-800">HiTech Informática - Controle de OS</h1>
+                </div>
+                <div class="flex flex-wrap gap-4 mt-2 text-sm text-gray-600">
+                    <p>Entrada: <span id="contadorEntrada" class="font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded">0</span></p>
+                    <p>Bancada: <span id="contadorBancada" class="font-bold text-orange-600 bg-orange-50 px-2 py-0.5 rounded">0</span></p>
+                    <p>Aguardando: <span id="contadorAguardando" class="font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded">0</span></p>
+                    <p>Enviados: <span id="contadorEnviados" class="font-bold text-purple-600 bg-purple-50 px-2 py-0.5 rounded">0</span></p>
+                </div>
+            </div>
+            <button onclick="abrirModalOS()" class="bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition w-full md:w-auto font-medium shadow cursor-pointer">
+                + Nova OS
+            </button>
+        </header>
+
+        <!-- Abas e Busca OS -->
+        <div class="mb-6 flex flex-col md:flex-row justify-between items-center gap-4 bg-white p-4 rounded-lg shadow">
+            <div class="flex gap-2 w-full md:w-auto overflow-x-auto pb-2 md:pb-0">
+                <button id="btnAbaEntrada" onclick="mudarAbaOS('ENTRADA')" class="flex-1 md:flex-none px-3 py-2 rounded-lg font-semibold text-sm transition bg-orange-500 text-white whitespace-nowrap shadow-sm cursor-pointer">📥 Entrada</button>
+                <button id="btnAbaBancada" onclick="mudarAbaOS('BANCADA')" class="flex-1 md:flex-none px-3 py-2 rounded-lg font-semibold text-sm transition bg-gray-200 text-gray-700 hover:bg-gray-300 whitespace-nowrap shadow-sm cursor-pointer">🛠️ Bancada</button>
+                <button id="btnAbaAguardando" onclick="mudarAbaOS('AGUARDANDO')" class="flex-1 md:flex-none px-3 py-2 rounded-lg font-semibold text-sm transition bg-gray-200 text-gray-700 hover:bg-gray-300 whitespace-nowrap shadow-sm cursor-pointer">⏳ Aguardando</button>
+                <button id="btnAbaEnviado" onclick="mudarAbaOS('ENVIADO')" class="flex-1 md:flex-none px-3 py-2 rounded-lg font-semibold text-sm transition bg-gray-200 text-gray-700 hover:bg-gray-300 whitespace-nowrap shadow-sm cursor-pointer">📤 Enviado</button>
+                <button id="btnAbaFinalizadas" onclick="mudarAbaOS('FINALIZADO')" class="flex-1 md:flex-none px-3 py-2 rounded-lg font-semibold text-sm transition bg-gray-200 text-gray-700 hover:bg-gray-300 whitespace-nowrap shadow-sm cursor-pointer">✅ Finalizados</button>
+            </div>
+            <div class="w-full md:w-80">
+                <input type="text" id="inputBuscaOS" placeholder="Pesquisar OS, Empresa ou Serial..." onkeyup="filtrarDadosOS()" class="w-full p-2 border rounded-lg bg-white text-sm focus:ring-2 focus:ring-orange-500 outline-none uppercase">
+            </div>
+        </div>
+
+        <!-- Tabela OS -->
+        <div class="bg-white rounded-lg shadow overflow-hidden hidden md:block">
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200 text-xs">
+                    <thead id="tabelaCabecalhoOS" class="bg-gray-50 text-gray-700 uppercase"></thead>
+                    <tbody id="tabelaCorpoOS" class="divide-y divide-gray-200 text-gray-600 uppercase"></tbody>
+                </table>
+            </div>
+        </div>
+        <div id="cardsMobileOS" class="grid grid-cols-1 gap-4 md:hidden"></div>
+    </div>
+
+    <!-- Modal OS -->
+    <div id="modalOS" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-xl max-w-xl w-full p-6 shadow-2xl max-h-[90vh] overflow-y-auto border-t-4 border-orange-500">
+            <h2 id="modalTituloOS" class="text-xl font-bold text-gray-800 mb-4 pb-2 border-b">Nova Ordem de Serviço</h2>
+            <form id="formOS" onsubmit="salvarOS(event)" class="space-y-4">
+                <input type="hidden" id="osId">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-gray-700 mb-1">Empresa *</label>
+                        <input type="text" id="empresa" required class="w-full p-2.5 border-2 rounded-lg text-sm bg-gray-50 focus:bg-white focus:border-orange-500 outline-none transition uppercase">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-gray-700 mb-1">Contato</label>
+                        <input type="text" id="contato" class="w-full p-2.5 border-2 rounded-lg text-sm bg-gray-50 focus:bg-white focus:border-orange-500 outline-none transition uppercase">
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-gray-700 mb-1">Nº OS *</label>
+                        <input type="text" id="numOs" required class="w-full p-2.5 border-2 rounded-lg text-sm bg-gray-50 focus:bg-white focus:border-orange-500 outline-none transition font-mono uppercase">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-gray-700 mb-1">Serial *</label>
+                        <input type="text" id="serial" required class="w-full p-2.5 border-2 rounded-lg text-sm bg-gray-50 focus:bg-white focus:border-orange-500 outline-none transition font-mono uppercase">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-gray-700 mb-1">Modelo *</label>
+                        <select id="modelo" required class="w-full p-2.5 border-2 rounded-lg bg-gray-50 focus:bg-white focus:border-orange-500 outline-none transition text-sm font-semibold text-gray-800 uppercase">
+                            <option value="">Selecione</option>
+                            <option value="IDCLASS">IDCLASS</option>
+                            <option value="IDFACE">IDFACE</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-gray-700 mb-1">Defeito Relatado</label>
+                        <textarea id="defeito" rows="2" class="w-full p-2.5 border-2 rounded-lg text-sm bg-gray-50 focus:bg-white focus:border-orange-500 outline-none transition uppercase"></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-gray-700 mb-1">Diagnóstico Técnico</label>
+                        <textarea id="diagnostico" rows="2" class="w-full p-2.5 border-2 rounded-lg text-sm bg-gray-50 focus:bg-white focus:border-orange-500 outline-none transition uppercase"></textarea>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-gray-50 p-3 rounded-xl border border-gray-200">
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-gray-700 mb-1">Data de Entrada *</label>
+                        <input type="date" id="dataEntrada" required class="w-full p-2.5 border-2 rounded-lg text-sm bg-white focus:border-orange-500 outline-none transition">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-gray-700 mb-1">Status Atual</label>
+                        <select id="statusOS" onchange="verificarStatusEnviado(this)" class="w-full p-2.5 border-2 rounded-lg bg-white focus:border-orange-500 outline-none transition text-sm font-bold text-gray-800">
+                            <option value="ENTRADA">Entrada</option>
+                            <option value="BANCADA">Bancada</option>
+                            <option value="AGUARDANDO">Aguardando</option>
+                            <option value="ENVIADO">Enviado</option>
+                            <option value="FINALIZADO">Finalizado</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="blocoDataEnvio" class="hidden bg-purple-50 p-3 rounded-xl border border-purple-200">
+                    <label class="block text-xs font-bold uppercase text-purple-900 mb-1">Data do Envio *</label>
+                    <input type="date" id="dataEnvio" class="w-full p-2.5 border-2 border-purple-300 rounded-lg text-sm bg-white focus:border-purple-500 outline-none transition font-bold text-gray-800">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase text-gray-700 mb-1">Observações Gerais</label>
+                    <textarea id="observacaoOS" rows="3" class="w-full p-2.5 border-2 rounded-lg text-sm bg-gray-50 focus:bg-white focus:border-orange-500 outline-none transition uppercase"></textarea>
+                </div>
+                <div class="flex justify-end gap-3 pt-4 border-t">
+                    <button type="button" onclick="fecharModalOS()" class="px-5 py-2.5 border rounded-xl text-gray-600 hover:bg-gray-100 font-medium text-sm transition cursor-pointer">Cancelar</button>
+                    <button type="submit" class="px-6 py-2.5 bg-orange-500 text-white rounded-xl hover:bg-orange-600 font-bold text-sm shadow transition cursor-pointer">Salvar Ordem</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Histórico -->
+    <div id="modalHistorico" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-xl max-w-2xl w-full p-6 shadow-2xl max-h-[90vh] overflow-y-auto border-t-4 border-orange-500">
+            <div class="flex justify-between items-center mb-4 pb-2 border-b">
+                <h2 class="text-xl font-bold text-gray-800">Histórico do Aparelho (Linha do Tempo)</h2>
+                <button onclick="fecharModalHistorico()" class="text-gray-500 hover:text-gray-800 font-bold text-lg px-2 cursor-pointer">✕</button>
+            </div>
+            <div id="conteudoHistorico" class="space-y-4 uppercase"></div>
+            <div class="flex justify-end pt-4 border-t mt-4">
+                <button type="button" onclick="fecharModalHistorico()" class="px-5 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium text-sm transition cursor-pointer">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="etiquetaImpressao" style="display:none;"></div>
+
+    <script type="module" src="app.js"></script>
+</body>
+</html>

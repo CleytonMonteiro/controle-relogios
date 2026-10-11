@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
-import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, setDoc, getDoc, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyC-qGBaWyOV2HJ7u3ljrC-rnxsbi3s4DSA",
@@ -18,14 +18,13 @@ let listaGlobalContratos = [];
 let abaAtualOS = "ENTRADA";
 
 document.addEventListener("DOMContentLoaded", () => {
-    const btnOS = document.getElementById('btnModuloOS');
-    const btnContratos = document.getElementById('btnModuloContratos');
-
-    if (btnOS) {
-        btnOS.addEventListener('click', () => entrarSistema('OS'));
+    // Detecta em qual página o usuário está e inicializa os dados correspondentes
+    if (document.getElementById('moduloOS') || document.getElementById('tabelaCorpoOS')) {
+        carregarDadosOS();
     }
-    if (btnContratos) {
-        btnContratos.addEventListener('click', () => entrarSistema('CONTRATOS'));
+    if (document.getElementById('moduloContratos') || document.getElementById('tabelaCorpoContratos')) {
+        carregarDadosContratos();
+        carregarNotasGeraisNuvem();
     }
 });
 
@@ -65,40 +64,6 @@ window.alternarPeriodicidade = function() {
         inputDia.required = false;
         inputData.value = '';
         inputData.required = true;
-    }
-}
-
-function entrarSistema(modulo) {
-    const tela = document.getElementById('telaAbertura');
-    const modOS = document.getElementById('moduloOS');
-    const modContratos = document.getElementById('moduloContratos');
-
-    if (tela) {
-        tela.classList.add('opacity-0');
-        setTimeout(() => {
-            tela.style.display = 'none';
-            if (modulo === 'OS') {
-                if (modOS) modOS.classList.remove('hidden');
-                carregarDadosOS();
-            } else if (modulo === 'CONTRATOS') {
-                if (modContratos) modContratos.classList.remove('hidden');
-                carregarDadosContratos();
-            }
-        }, 700);
-    }
-}
-window.entrarSistema = entrarSistema;
-
-window.voltarInicio = function() {
-    const tela = document.getElementById('telaAbertura');
-    const modOS = document.getElementById('moduloOS');
-    const modContratos = document.getElementById('moduloContratos');
-
-    if (modOS) modOS.classList.add('hidden');
-    if (modContratos) modContratos.classList.add('hidden');
-    if (tela) {
-        tela.style.display = 'flex';
-        setTimeout(() => tela.classList.remove('opacity-0'), 50);
     }
 }
 
@@ -156,11 +121,11 @@ window.mudarAbaOS = function(status) {
     abaAtualOS = status;
     ['ENTRADA', 'BANCADA', 'AGUARDANDO', 'ENVIADO', 'FINALIZADO'].forEach(s => {
         const btn = document.getElementById('btnAba' + s.charAt(0) + s.slice(1).toLowerCase());
-        if (btn) btn.className = "flex-1 md:flex-none px-3 py-2 rounded-lg font-semibold text-sm transition bg-gray-200 text-gray-700 hover:bg-gray-300 whitespace-nowrap shadow-sm";
+        if (btn) btn.className = "flex-1 md:flex-none px-3 py-2 rounded-lg font-semibold text-sm transition bg-gray-200 text-gray-700 hover:bg-gray-300 whitespace-nowrap shadow-sm cursor-pointer";
     });
     const ativoBtn = document.getElementById('btnAba' + status.charAt(0) + status.slice(1).toLowerCase());
     if (ativoBtn) {
-        ativoBtn.className = `flex-1 md:flex-none px-3 py-2 rounded-lg font-semibold text-sm transition text-white whitespace-nowrap shadow-sm ${status === 'AGUARDANDO' ? 'bg-amber-500' : status === 'ENVIADO' ? 'bg-purple-600' : status === 'FINALIZADO' ? 'bg-green-600' : 'bg-orange-500'}`;
+        ativoBtn.className = `flex-1 md:flex-none px-3 py-2 rounded-lg font-semibold text-sm transition text-white whitespace-nowrap shadow-sm cursor-pointer ${status === 'AGUARDANDO' ? 'bg-amber-500' : status === 'ENVIADO' ? 'bg-purple-600' : status === 'FINALIZADO' ? 'bg-green-600' : 'bg-orange-500'}`;
     }
     filtrarDadosOS();
 }
@@ -224,10 +189,10 @@ function renderizarOS(dados) {
                 <td class="px-3 py-3 text-center">${badgeStatus}</td>
                 <td class="px-3 py-3">${item.observacao || ''}</td>
                 <td class="px-3 py-3 text-center space-x-1.5 whitespace-nowrap">
-                    <button onclick='verHistoricoPorSerial("${item.serial}")' class="text-orange-700 font-bold bg-orange-50 px-2 py-1 rounded border border-orange-200">Histórico</button>
-                    <button onclick='imprimirOSPorId("${item.id}")' class="text-gray-700 font-bold bg-gray-100 px-2 py-1 rounded border border-gray-300">Imprimir</button>
-                    <button onclick='editarOSPorId("${item.id}")' class="text-blue-600 font-bold">Editar</button>
-                    <button onclick='excluirOS("${item.id}")' class="text-red-600 font-bold">Excluir</button>
+                    <button onclick='verHistoricoPorSerial("${item.serial}")' class="text-orange-700 font-bold bg-orange-50 px-2 py-1 rounded border border-orange-200 cursor-pointer">Histórico</button>
+                    <button onclick='imprimirOSPorId("${item.id}")' class="text-gray-700 font-bold bg-gray-100 px-2 py-1 rounded border border-gray-300 cursor-pointer">Imprimir</button>
+                    <button onclick='editarOSPorId("${item.id}")' class="text-blue-600 font-bold cursor-pointer">Editar</button>
+                    <button onclick='excluirOS("${item.id}")' class="text-red-600 font-bold cursor-pointer">Excluir</button>
                 </td>
             </tr>
         `;
@@ -235,7 +200,9 @@ function renderizarOS(dados) {
 }
 
 window.filtrarDadosOS = function() {
-    const termo = document.getElementById('inputBuscaOS').value.toLowerCase();
+    const inputBusca = document.getElementById('inputBuscaOS');
+    if (!inputBusca) return;
+    const termo = inputBusca.value.toLowerCase();
     const filtrados = listaGlobalOS.filter(i => (i.status || 'ENTRADA') === abaAtualOS && ((i.empresa && i.empresa.toLowerCase().includes(termo)) || (i.numOs && i.numOs.toLowerCase().includes(termo)) || (i.serial && i.serial.toLowerCase().includes(termo))));
     renderizarOS(filtrados);
 }
@@ -243,6 +210,7 @@ window.filtrarDadosOS = function() {
 window.verificarStatusEnviado = function(select) {
     const bloco = document.getElementById('blocoDataEnvio');
     const inputData = document.getElementById('dataEnvio');
+    if (!bloco || !inputData) return;
     if (select.value === 'ENVIADO') {
         bloco.classList.remove('hidden');
         inputData.required = true;
@@ -356,7 +324,77 @@ window.imprimirOSPorId = function(id) {
     window.print();
 }
 
+window.verHistoricoPorSerial = function(serialBuscado) {
+    const container = document.getElementById('conteudoHistorico');
+    const modal = document.getElementById('modalHistorico');
+    if (!container || !modal) return;
+
+    const his = listaGlobalOS.filter(i => i.serial && i.serial.toUpperCase() === serialBuscado.toUpperCase());
+    if (his.length === 0) { alert("Nenhum histórico encontrado."); return; }
+
+    his.sort((a, b) => new Date(b.dataEntrada) - new Date(a.dataEntrada));
+    let html = `<div class="mb-3 p-3 bg-orange-50 rounded-lg border border-orange-200"><span class="text-xs font-bold text-orange-900">Serial:</span> <span class="font-mono font-bold">${serialBuscado}</span></div>`;
+    
+    his.forEach((h, idx) => {
+        html += `<div class="p-3 bg-white border rounded shadow-sm text-xs space-y-1"><div class="font-bold text-gray-700">Atendimento #${his.length - idx} - OS: ${h.numOs}</div><div>Empresa: ${h.empresa}</div><div>Defeito: ${h.defeito}</div></div>`;
+    });
+    container.innerHTML = html;
+    modal.classList.remove('hidden');
+}
+
+window.fecharModalHistorico = function() { document.getElementById('modalHistorico').classList.add('hidden'); }
+
+
 // ================= MÓDULO DE CONTRATOS & LICENÇAS =================
+
+window.salvarNotasGeraisNuvem = async function() {
+    const campo = document.getElementById('txtNotasGerais');
+    const statusEl = document.getElementById('statusSalvarNotas');
+    if (!campo || !statusEl) return;
+
+    const texto = campo.value.trim().toUpperCase();
+    
+    try {
+        statusEl.innerText = "Salvando na nuvem...";
+        statusEl.className = "text-[11px] font-bold text-amber-600";
+
+        await setDoc(doc(db, "hitech_config", "notas_gerais"), {
+            conteudo: texto,
+            ultimaAtualizacao: new Date().toISOString()
+        });
+
+        statusEl.innerText = "✓ Salvo na nuvem com sucesso!";
+        statusEl.className = "text-[11px] font-bold text-emerald-600";
+        
+        setTimeout(() => {
+            statusEl.innerText = "";
+        }, 4000);
+    } catch (e) {
+        console.error("Erro ao salvar notas na nuvem:", e);
+        statusEl.innerText = "❌ Erro ao salvar!";
+        statusEl.className = "text-[11px] font-bold text-red-600";
+    }
+}
+
+async function carregarNotasGeraisNuvem() {
+    const campo = document.getElementById('txtNotasGerais');
+    const statusEl = document.getElementById('statusSalvarNotas');
+    if (!campo) return;
+
+    try {
+        const docSnap = await getDoc(doc(db, "hitech_config", "notas_gerais"));
+        if (docSnap.exists()) {
+            const dados = docSnap.data();
+            campo.value = dados.conteudo || '';
+            if (statusEl) {
+                statusEl.innerText = "✓ Sincronizado da nuvem";
+                statusEl.className = "text-[11px] font-bold text-gray-400";
+            }
+        }
+    } catch (error) {
+        console.error("Erro ao carregar notas da nuvem:", error);
+    }
+}
 
 async function carregarDadosContratos() {
     try {
@@ -409,6 +447,8 @@ function verificarAlertasVencimento() {
 
     const bannerAlerta = document.getElementById('alertaVencimentos');
     const listaAlerta = document.getElementById('listaContratosAlerta');
+    if (!bannerAlerta || !listaAlerta) return;
+
     let avisos = [];
 
     listaGlobalContratos.forEach(c => {
@@ -426,7 +466,6 @@ function verificarAlertasVencimento() {
         const diffTempo = dataVencObj - hoje;
         const diffDias = Math.ceil(diffTempo / (1000 * 60 * 60 * 24));
 
-        // Alerta configurado para 10 dias de antecedência
         if (diffDias <= 10) {
             let statusTexto = diffDias < 0 ? `Vencido há ${Math.abs(diffDias)} dia(s)` : diffDias === 0 ? `Vence HOJE!` : `Vence em ${diffDias} dia(s)`;
             avisos.push(`• <strong>${c.razaoSocial}</strong> (Plano: ${c.plano || 'PADRÃO'}) - ${textoVencimentoExibicao} - <span class="font-bold underline">${statusTexto}</span>`);
@@ -523,8 +562,8 @@ function renderizarContratos(dados) {
                 <td class="px-4 py-3 text-center">${statusBadge}</td>
                 <td class="px-4 py-3 coluna-obs">${c.observacao || ''}</td>
                 <td class="px-4 py-3 text-center space-x-2 whitespace-nowrap acoes-esconder">
-                    <button onclick='editarContratoPorId("${c.id}")' class="text-blue-600 font-bold">Editar</button>
-                    <button onclick='excluirContrato("${c.id}")' class="text-red-600 font-bold">Excluir</button>
+                    <button onclick='editarContratoPorId("${c.id}")' class="text-blue-600 font-bold cursor-pointer">Editar</button>
+                    <button onclick='excluirContrato("${c.id}")' class="text-red-600 font-bold cursor-pointer">Excluir</button>
                 </td>
             </tr>
         `;
@@ -533,9 +572,10 @@ function renderizarContratos(dados) {
 
 window.acionarImpressao = function() {
     const tabelaPrincipal = document.getElementById('tabelaContratosPrincipal');
-    const incluirObs = document.getElementById('chkIncluirObs').checked;
+    const chk = document.getElementById('chkIncluirObs');
+    if (!tabelaPrincipal || !chk) return;
 
-    if (!incluirObs) {
+    if (!chk.checked) {
         tabelaPrincipal.classList.add('tabela-sem-obs');
     } else {
         tabelaPrincipal.classList.remove('tabela-sem-obs');
@@ -545,7 +585,9 @@ window.acionarImpressao = function() {
 }
 
 window.filtrarDadosContratos = function() {
-    const termo = document.getElementById('inputBuscaContrato').value.toLowerCase();
+    const inputBusca = document.getElementById('inputBuscaContrato');
+    if (!inputBusca) return;
+    const termo = inputBusca.value.toLowerCase();
     const filtrados = listaGlobalContratos.filter(c => (c.razaoSocial && c.razaoSocial.toLowerCase().includes(termo)) || (c.cnpj && c.cnpj.toLowerCase().includes(termo)) || (c.plano && c.plano.toLowerCase().includes(termo)));
     renderizarContratos(filtrados);
 }
@@ -628,23 +670,3 @@ window.excluirContrato = async function(id) {
         }
     }
 }
-
-window.verHistoricoPorSerial = function(serialBuscado) {
-    const container = document.getElementById('conteudoHistorico');
-    const modal = document.getElementById('modalHistorico');
-    if (!container || !modal) return;
-
-    const his = listaGlobalOS.filter(i => i.serial && i.serial.toUpperCase() === serialBuscado.toUpperCase());
-    if (his.length === 0) { alert("Nenhum histórico encontrado."); return; }
-
-    his.sort((a, b) => new Date(b.dataEntrada) - new Date(a.dataEntrada));
-    let html = `<div class="mb-3 p-3 bg-orange-50 rounded-lg border border-orange-200"><span class="text-xs font-bold text-orange-900">Serial:</span> <span class="font-mono font-bold">${serialBuscado}</span></div>`;
-    
-    his.forEach((h, idx) => {
-        html += `<div class="p-3 bg-white border rounded shadow-sm text-xs space-y-1"><div class="font-bold text-gray-700">Atendimento #${his.length - idx} - OS: ${h.numOs}</div><div>Empresa: ${h.empresa}</div><div>Defeito: ${h.defeito}</div></div>`;
-    });
-    container.innerHTML = html;
-    modal.classList.add('hidden');
-}
-
-window.fecharModalHistorico = function() { document.getElementById('modalHistorico').classList.add('hidden'); }

@@ -175,10 +175,15 @@ function renderizarOS(dados) {
     containerMobile.innerHTML = '';
 
     const exibePrazos = (abaAtualOS === 'ENTRADA' || abaAtualOS === 'BANCADA');
+    const isEnviados = (abaAtualOS === 'ENVIADO');
 
     thead.innerHTML = exibePrazos ? `
         <tr>
             <th class="px-3 py-3 text-left">Empresa</th><th class="px-3 py-3 text-left">Contato</th><th class="px-3 py-3 text-left">Nº OS</th><th class="px-3 py-3 text-left">Serial</th><th class="px-3 py-3 text-left">Modelo</th><th class="px-3 py-3 text-left">Defeito</th><th class="px-3 py-3 text-left">Diagnóstico</th><th class="px-3 py-3 text-left">Entrada</th><th class="px-3 py-3 text-center">Dias Úteis</th><th class="px-3 py-3 text-center">Prazo</th><th class="px-3 py-3 text-center">Status</th><th class="px-3 py-3 text-left">Observações</th><th class="px-3 py-3 text-center">Ações</th>
+        </tr>
+    ` : isEnviados ? `
+        <tr>
+            <th class="px-3 py-3 text-left">Empresa</th><th class="px-3 py-3 text-left">Contato</th><th class="px-3 py-3 text-left">Nº OS</th><th class="px-3 py-3 text-left">Serial</th><th class="px-3 py-3 text-left">Modelo</th><th class="px-3 py-3 text-left">Defeito</th><th class="px-3 py-3 text-left">Diagnóstico</th><th class="px-3 py-3 text-left font-bold text-purple-700">Data de Envio</th><th class="px-3 py-3 text-center">Status</th><th class="px-3 py-3 text-left">Observações</th><th class="px-3 py-3 text-center">Ações</th>
         </tr>
     ` : `
         <tr>
@@ -194,6 +199,10 @@ function renderizarOS(dados) {
 
     dados.forEach(item => {
         let dataF = item.dataEntrada ? item.dataEntrada.split('-').reverse().join('/') : '';
+        if (isEnviados && item.dataEnvio) {
+            dataF = item.dataEnvio.split('-').reverse().join('/');
+        }
+
         const { diasPassados, statusPrazo } = calcularPrazosOS(item.dataEntrada);
         const isVencido = (statusPrazo === 'Vencido' && (item.status === 'ENTRADA' || item.status === 'BANCADA'));
         const badgePrazo = statusPrazo === 'Vencido' ? '<span class="px-2 py-1 rounded text-xs font-semibold bg-red-100 text-red-800">Vencido</span>' : '<span class="px-2 py-1 rounded text-xs font-semibold bg-green-100 text-green-800">No Prazo</span>';
@@ -210,7 +219,7 @@ function renderizarOS(dados) {
                 <td class="px-3 py-3 font-semibold text-gray-800">${item.modelo || ''}</td>
                 <td class="px-3 py-3">${item.defeito || ''}</td>
                 <td class="px-3 py-3">${item.diagnostico || ''}</td>
-                <td class="px-3 py-3">${dataF}</td>
+                <td class="px-3 py-3 ${isEnviados ? 'font-bold text-purple-700' : ''}">${dataF}</td>
                 ${exibePrazos ? `<td class="px-3 py-3 text-center font-bold">${diasPassados}</td><td class="px-3 py-3 text-center">${badgePrazo}</td>` : ''}
                 <td class="px-3 py-3 text-center">${badgeStatus}</td>
                 <td class="px-3 py-3">${item.observacao || ''}</td>
@@ -314,9 +323,37 @@ window.excluirOS = async function(id) {
     }
 }
 
+// Função que gera o Ticket de OS idêntico ao modelo da etiqueta térmica
 window.imprimirOSPorId = function(id) {
     const item = listaGlobalOS.find(i => i.id === id);
     if (!item) return;
+
+    let dataF = item.dataEntrada ? item.dataEntrada.split('-').reverse().join('/') : '';
+
+    const containerEtiqueta = document.getElementById('etiquetaImpressao');
+    containerEtiqueta.innerHTML = `
+        <div style="border: 2px dashed #000; padding: 10px; width: 100%; box-sizing: border-box;">
+            <div style="text-align: center; font-weight: bold; font-size: 14px; border-bottom: 1px solid #000; padding-bottom: 5px; margin-bottom: 8px;">
+                ASSISTÊNCIA TÉCNICA - OS
+            </div>
+            <div style="font-size: 13px; font-weight: bold; margin-bottom: 4px;">
+                Nº OS: ${item.numOs || ''}
+            </div>
+            <div style="font-size: 12px; margin-bottom: 4px;">
+                <strong>Empresa:</strong> ${item.empresa || ''}
+            </div>
+            <div style="font-size: 12px; margin-bottom: 4px;">
+                <strong>Modelo:</strong> ${item.modelo || ''} | <strong>Serial:</strong> ${item.serial || ''}
+            </div>
+            <div style="font-size: 12px; margin-bottom: 8px;">
+                <strong>Entrada:</strong> ${dataF}
+            </div>
+            <div style="border-top: 1px dotted #000; padding-top: 6px; font-size: 12px;">
+                <strong>Defeito:</strong> ${item.defeito || 'NÃO INFORMADO'}
+            </div>
+        </div>
+    `;
+
     window.print();
 }
 
@@ -607,7 +644,7 @@ window.verHistoricoPorSerial = function(serialBuscado) {
         html += `<div class="p-3 bg-white border rounded shadow-sm text-xs space-y-1"><div class="font-bold text-gray-700">Atendimento #${his.length - idx} - OS: ${h.numOs}</div><div>Empresa: ${h.empresa}</div><div>Defeito: ${h.defeito}</div></div>`;
     });
     container.innerHTML = html;
-    modal.classList.remove('hidden');
+    modal.classList.add('hidden');
 }
 
 window.fecharModalHistorico = function() { document.getElementById('modalHistorico').classList.add('hidden'); }

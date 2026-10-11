@@ -13,24 +13,28 @@
                 margin: 10mm;
             }
 
-            /* Reseta a visibilidade para impressão */
+            /* Reseta a visibilidade padrão */
             body * {
                 visibility: hidden;
             }
 
-            /* Torna visível apenas o módulo ativo no momento da impressão */
-            #moduloContratos:not(.hidden), #moduloContratos:not(.hidden) *,
-            #moduloOS:not(.hidden), #moduloOS:not(.hidden) * {
+            /* Se estiver imprimindo o Contrato, mostra apenas o painel de contratos */
+            #moduloContratos:not(.hidden), #moduloContratos:not(.hidden) * {
                 visibility: visible;
             }
 
-            /* Esconde botões, inputs de busca, menus e elementos de ação */
+            /* Se estiver imprimindo o Ticket da OS, mostra apenas o ticket */
+            #etiquetaImpressao, #etiquetaImpressao * {
+                visibility: visible !important;
+            }
+
+            /* Esconde botões e barras de busca no contrato */
             header button, #inputBuscaContrato, #inputBuscaOS, .acoes-esconder, button, label[for="chkIncluirObs"] {
                 display: none !important;
             }
 
-            /* Posiciona o módulo ativo no topo da folha impressa */
-            #moduloContratos:not(.hidden), #moduloOS:not(.hidden) {
+            /* Posicionamento para Contratos */
+            #moduloContratos:not(.hidden) {
                 position: absolute;
                 left: 0;
                 top: 0;
@@ -40,29 +44,36 @@
                 background: #fff;
             }
 
-            /* Compacta a tabela para garantir que caiba perfeitamente na página */
-            table {
+            /* Estilo específico para o Ticket de OS (Etiqueta Térmica) */
+            #etiquetaImpressao {
+                display: block !important;
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 80mm;
+                padding: 5mm;
+                font-family: monospace;
+                background: white;
+                color: black;
+            }
+
+            /* Compacta a tabela de contratos se for o caso */
+            #tabelaContratosPrincipal {
                 width: 100% !important;
                 font-size: 9px !important;
                 border-collapse: collapse !important;
             }
 
-            th, td {
+            #tabelaContratosPrincipal th, #tabelaContratosPrincipal td {
                 padding: 4px 6px !important;
                 border: 1px solid #cbd5e1 !important;
             }
 
-            th {
+            #tabelaContratosPrincipal th {
                 background-color: #f1f5f9 !important;
                 color: #000 !important;
             }
 
-            .shadow, .rounded-lg, .rounded-xl {
-                box-shadow: none !important;
-                border-radius: 0 !important;
-            }
-
-            /* Esconde a coluna de observação na impressão se a opção estiver desmarcada */
             .tabela-sem-obs .coluna-obs {
                 display: none !important;
             }
@@ -71,14 +82,15 @@
 </head>
 <body class="bg-gray-100 font-sans">
 
-    <!-- Tela de Abertura / Seleção de Módulo com Preto Absoluto igual à Logo -->
-    <div id="telaAbertura" class="fixed inset-0 bg-black z-50 flex flex-col items-center justify-center text-white transition-opacity duration-700 border-t-8 border-orange-500">
+    <!-- Tela de Abertura / Seleção de Módulo com Bordas Laranjas Superior e Inferior -->
+    <div id="telaAbertura" class="fixed inset-0 bg-black z-50 flex flex-col items-center justify-between text-white transition-opacity duration-700 border-t-8 border-b-8 border-orange-500 py-6">
+        <div></div>
         <div class="text-center p-6 max-w-lg flex flex-col items-center">
-            <!-- Logo Inserida -->
-            <img src="hitech_ponto.jpg" alt="HiTech Logo" class="w-48 h-auto mb-5 rounded-xl shadow-lg border border-neutral-900 object-contain">
+            <!-- Logo Ampliada -->
+            <img src="hitech_ponto.jpg" alt="HiTech Logo" class="w-72 h-auto mb-5 rounded-2xl shadow-2xl border border-neutral-900 object-contain">
             
             <!-- Frase com Destaque Visual -->
-            <div class="mb-8 px-4 py-2 bg-neutral-900 border border-orange-500/30 rounded-full shadow-[0_0_15px_rgba(249,115,22,0.15)]">
+            <div class="mb-8 px-5 py-2.5 bg-neutral-900 border border-orange-500/30 rounded-full shadow-[0_0_20px_rgba(249,115,22,0.15)]">
                 <p class="text-orange-400 text-xs sm:text-sm font-bold uppercase tracking-[0.25em]">Painel de Gestão Integrada</p>
             </div>
             
@@ -87,11 +99,12 @@
                 <button id="btnModuloOS" class="bg-orange-500 hover:bg-orange-600 text-white font-bold px-6 py-3.5 rounded-xl shadow-lg transition transform hover:scale-105 uppercase tracking-wider text-sm border border-orange-400 cursor-pointer">
                     🔧 Controle de OS
                 </button>
-                <button id="btnModuloContratos" class="bg-neutral-900 hover:bg-neutral-800 text-white font-bold px-6 py-3.5 rounded-xl shadow-lg transition transform hover:scale-105 uppercase tracking-wider text-sm border border-neutral-700 cursor-pointer">
+                <button id="btnModuloContratos" class="bg-zinc-800 hover:bg-zinc-700 text-white font-bold px-6 py-3.5 rounded-xl shadow-lg transition transform hover:scale-105 uppercase tracking-wider text-sm border border-zinc-600 cursor-pointer">
                     📄 Contratos & Licenças
                 </button>
             </div>
         </div>
+        <div class="text-xs text-neutral-500 uppercase tracking-widest font-semibold">HiTech Informática © 2026</div>
     </div>
 
     <!-- ================= CONTEÚDO: CONTROLE DE OS ================= -->
@@ -343,7 +356,7 @@
         </div>
     </div>
 
-    <!-- Modais de Histórico e Impressão -->
+    <!-- Modais de Histórico -->
     <div id="modalHistorico" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center p-4 z-50">
         <div class="bg-white rounded-xl max-w-2xl w-full p-6 shadow-2xl max-h-[90vh] overflow-y-auto border-t-4 border-orange-500">
             <div class="flex justify-between items-center mb-4 pb-2 border-b">
@@ -357,6 +370,7 @@
         </div>
     </div>
 
+    <!-- Container Oculto para Impressão do Ticket Térmico de OS -->
     <div id="etiquetaImpressao" style="display:none;"></div>
 
     <!-- Script Principal -->

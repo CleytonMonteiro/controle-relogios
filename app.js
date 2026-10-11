@@ -63,7 +63,7 @@ window.alternarPeriodicidade = function() {
         blocoDia.classList.add('hidden');
         blocoData.classList.remove('hidden');
         inputDia.required = false;
-        inputDia.value = '';
+        inputData.value = '';
         inputData.required = true;
     }
 }
@@ -323,7 +323,6 @@ window.excluirOS = async function(id) {
     }
 }
 
-// Função que gera o Ticket de OS idêntico ao modelo da etiqueta térmica
 window.imprimirOSPorId = function(id) {
     const item = listaGlobalOS.find(i => i.id === id);
     if (!item) return;
@@ -427,7 +426,8 @@ function verificarAlertasVencimento() {
         const diffTempo = dataVencObj - hoje;
         const diffDias = Math.ceil(diffTempo / (1000 * 60 * 60 * 24));
 
-        if (diffDias <= 7) {
+        // Alerta configurado para 10 dias de antecedência
+        if (diffDias <= 10) {
             let statusTexto = diffDias < 0 ? `Vencido há ${Math.abs(diffDias)} dia(s)` : diffDias === 0 ? `Vence HOJE!` : `Vence em ${diffDias} dia(s)`;
             avisos.push(`• <strong>${c.razaoSocial}</strong> (Plano: ${c.plano || 'PADRÃO'}) - ${textoVencimentoExibicao} - <span class="font-bold underline">${statusTexto}</span>`);
         }
@@ -452,7 +452,7 @@ function atualizarContadoresContratos(dadosExibidos) {
         let dataVencObj = obterDataObjetoContrato(c, hoje);
         if (!dataVencObj) return;
         const diffDias = Math.ceil((dataVencObj - hoje) / (1000 * 60 * 60 * 24));
-        if (diffDias <= 7) {
+        if (diffDias <= 10) {
             vencendo++;
         } else {
             regulares++;
@@ -494,7 +494,7 @@ function renderizarContratos(dados) {
             vencimentoExibicao = `${partes[2]}/${partes[1]}/${partes[0]}`;
             const dataVencObj = new Date(partes[0], partes[1] - 1, partes[2]);
             const diffDias = Math.ceil((dataVencObj - hoje) / (1000 * 60 * 60 * 24));
-            if (diffDias <= 7) {
+            if (diffDias <= 10) {
                 statusBadge = `<span class="px-2 py-1 rounded text-xs font-semibold bg-red-100 text-red-800">Próximo / Vencido</span>`;
             }
         } else {
@@ -503,7 +503,7 @@ function renderizarContratos(dados) {
             if (!isNaN(diaVenc)) {
                 let dataVencObj = new Date(hoje.getFullYear(), hoje.getMonth() + 1, diaVenc);
                 const diffDias = Math.ceil((dataVencObj - hoje) / (1000 * 60 * 60 * 24));
-                if (diffDias <= 7) {
+                if (diffDias <= 10) {
                     statusBadge = `<span class="px-2 py-1 rounded text-xs font-semibold bg-red-100 text-red-800">Próximo / Vencido</span>`;
                 }
             }

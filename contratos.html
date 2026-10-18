@@ -10,7 +10,7 @@
             @page { size: A4 portrait; margin: 10mm; }
             body * { visibility: hidden; }
             #moduloContratos, #moduloContratos * { visibility: visible; }
-            header button, #inputBuscaContrato, .acoes-esconder, button, label[for="chkIncluirObs"], #blocoNotasGeraisContratos { display: none !important; }
+            header button, #inputBuscaContrato, #filtroDiaVencimento, #filtroMesAnual, .acoes-esconder, button, label[for="chkIncluirObs"], #blocoNotasGeraisContratos { display: none !important; }
             #moduloContratos { position: absolute; left: 0; top: 0; width: 100%; padding: 0 !important; margin: 0 !important; background: #fff; }
             #tabelaContratosPrincipal { width: 100% !important; font-size: 9px !important; border-collapse: collapse !important; }
             #tabelaContratosPrincipal th, #tabelaContratosPrincipal td { padding: 4px 6px !important; border: 1px solid #cbd5e1 !important; }
@@ -61,7 +61,7 @@
             </div>
         </div>
 
-        <!-- Bloco de Observações e Pesquisa -->
+        <!-- Bloco de Observações, Pesquisa e Filtros Avançados -->
         <div class="mb-6 bg-white p-4 rounded-lg shadow acoes-esconder space-y-4">
             <div id="blocoNotasGeraisContratos">
                 <div class="flex justify-between items-center mb-1.5">
@@ -78,8 +78,38 @@
                 </div>
             </div>
 
-            <div class="border-t pt-4 w-full md:w-96">
-                <input type="text" id="inputBuscaContrato" placeholder="Pesquisar por Razão Social, CNPJ ou Plano..." onkeyup="filtrarDadosContratos()" class="w-full p-2 border rounded-lg bg-white text-sm focus:ring-2 focus:ring-orange-500 outline-none uppercase">
+            <div class="border-t pt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+                <!-- Campo de Pesquisa Geral -->
+                <div>
+                    <label class="block text-xs font-bold uppercase text-gray-700 mb-1">Pesquisar Empresa / CNPJ / Plano</label>
+                    <input type="text" id="inputBuscaContrato" placeholder="Digite para buscar..." onkeyup="filtrarDadosContratos()" class="w-full p-2 border rounded-lg bg-white text-sm focus:ring-2 focus:ring-orange-500 outline-none uppercase">
+                </div>
+                <!-- Filtro por Dia de Vencimento (Dinâmico) -->
+                <div>
+                    <label class="block text-xs font-bold uppercase text-gray-700 mb-1">Filtro Dia (Mensais)</label>
+                    <select id="filtroDiaVencimento" onchange="filtrarDadosContratos()" class="w-full p-2 border rounded-lg bg-white text-sm focus:ring-2 focus:ring-orange-500 outline-none font-bold text-gray-800">
+                        <option value="">TODOS OS DIAS</option>
+                    </select>
+                </div>
+                <!-- Filtro por Mês de Vencimento (Anual) -->
+                <div>
+                    <label class="block text-xs font-bold uppercase text-gray-700 mb-1">Filtro Mês (Anuais)</label>
+                    <select id="filtroMesAnual" onchange="filtrarDadosContratos()" class="w-full p-2 border rounded-lg bg-white text-sm focus:ring-2 focus:ring-orange-500 outline-none font-bold text-gray-800">
+                        <option value="">TODOS OS MESES</option>
+                        <option value="01">JANEIRO</option>
+                        <option value="02">FEVEREIRO</option>
+                        <option value="03">MARÇO</option>
+                        <option value="04">ABRIL</option>
+                        <option value="05">MAIO</option>
+                        <option value="06">JUNHO</option>
+                        <option value="07">JULHO</option>
+                        <option value="08">AGOSTO</option>
+                        <option value="09">SETEMBRO</option>
+                        <option value="10">OUTUBRO</option>
+                        <option value="11">NOVEMBRO</option>
+                        <option value="12">DEZEMBRO</option>
+                    </select>
+                </div>
             </div>
         </div>
 
@@ -89,7 +119,7 @@
                 <table id="tabelaContratosPrincipal" class="min-w-full divide-y divide-gray-200 text-xs">
                     <thead class="bg-gray-50 text-gray-700 uppercase">
                         <tr>
-                            <th class="px-4 py-3 text-left">Razão Social</th>
+                            <th class="px-4 py-3 text-left">Razão Social & Contatos</th>
                             <th class="px-4 py-3 text-left whitespace-nowrap">CNPJ</th>
                             <th class="px-4 py-3 text-center">Plano / Sistema</th>
                             <th class="px-4 py-3 text-center">Periodicidade</th>
@@ -105,9 +135,9 @@
         </div>
     </div>
 
-    <!-- Modal Contrato -->
+    <!-- Modal Cadastro / Edição de Contrato -->
     <div id="modalContrato" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center p-4 z-50">
-        <div class="bg-white rounded-xl max-w-lg w-full p-6 shadow-2xl border-t-4 border-orange-500">
+        <div class="bg-white rounded-xl max-w-lg w-full p-6 shadow-2xl border-t-4 border-orange-500 max-h-[90vh] overflow-y-auto">
             <h2 id="modalTituloContrato" class="text-xl font-bold text-gray-800 mb-4 pb-2 border-b">Novo Contrato / Licença</h2>
             <form id="formContrato" onsubmit="salvarContrato(event)" class="space-y-4">
                 <input type="hidden" id="contratoId">
@@ -123,6 +153,17 @@
                     <div>
                         <label class="block text-xs font-bold uppercase text-gray-700 mb-1">Plano / Sistema *</label>
                         <input type="text" id="plano" required placeholder="Ex: PRO, BASIC, ULTIMATE..." class="w-full p-2.5 border-2 rounded-lg text-sm bg-gray-50 focus:bg-white focus:border-orange-500 outline-none transition uppercase font-bold text-orange-600">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-gray-700 mb-1">E-mail para Contato</label>
+                        <input type="email" id="emailContato" placeholder="exemplo@empresa.com" class="w-full p-2.5 border-2 rounded-lg text-sm bg-gray-50 focus:bg-white focus:border-orange-500 outline-none transition">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-gray-700 mb-1">Celular / WhatsApp</label>
+                        <input type="text" id="whatsappContato" placeholder="(79) 99999-9999" class="w-full p-2.5 border-2 rounded-lg text-sm bg-gray-50 focus:bg-white focus:border-orange-500 outline-none transition font-mono">
                     </div>
                 </div>
 
@@ -156,6 +197,45 @@
         </div>
     </div>
 
-    <script type="module" src="app.js"></script>
+    <!-- Modal de Detalhes, Templates e Ações Rápidas -->
+    <div id="modalDetalhesContrato" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-xl max-w-lg w-full p-6 shadow-2xl border-t-4 border-orange-500 space-y-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center pb-2 border-b">
+                <h2 id="detalheRazaoSocial" class="text-lg font-bold text-gray-800">Detalhes do Contrato</h2>
+                <button onclick="fecharModalDetalhes()" class="text-gray-500 hover:text-gray-800 font-bold text-lg px-2 cursor-pointer">✕</button>
+            </div>
+            
+            <div id="conteudoDetalhesContrato" class="text-xs space-y-2 text-gray-700"></div>
+
+            <!-- Seletor de Modelo de Mensagem (Template) -->
+            <div class="bg-orange-50 p-3 rounded-lg border border-orange-200 space-y-2">
+                <label class="block text-xs font-bold uppercase text-orange-900">💬 Selecionar Modelo de Mensagem / Lembrete</label>
+                <select id="selectTemplateMensagem" onchange="aplicarTemplateMensagem()" class="w-full p-2 border rounded-lg bg-white text-xs font-semibold text-gray-800 outline-none">
+                    <option value="lembrete">1. Lembrete Padrão de Vencimento</option>
+                    <option value="atraso">2. Aviso de Vencimento em Atraso</option>
+                    <option value="boasvindas">3. Boas-Vindas / Instalação do Sistema</option>
+                    <option value="suporte">4. Suporte / Manutenção Preventiva</option>
+                </select>
+                <div>
+                    <textarea id="textoMensagemPronta" rows="4" class="w-full p-2.5 border rounded-lg text-xs bg-white uppercase outline-none focus:border-orange-500"></textarea>
+                </div>
+                <div class="flex gap-2 pt-1">
+                    <button onclick="enviarWhatsAppCliente()" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-3 rounded-lg text-xs transition shadow flex items-center justify-center gap-1.5 cursor-pointer">
+                        🟢 Enviar WhatsApp
+                    </button>
+                    <button onclick="enviarEmailCliente()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-3 rounded-lg text-xs transition shadow flex items-center justify-center gap-1.5 cursor-pointer">
+                        📧 Enviar E-mail
+                    </button>
+                </div>
+            </div>
+
+            <div class="flex justify-end pt-2 border-t">
+                <button type="button" onclick="fecharModalDetalhes()" class="px-5 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium text-sm transition cursor-pointer">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script modular JS vinculado -->
+    <script type="module" src="contratos.js"></script>
 </body>
 </html>

@@ -18,7 +18,6 @@ let listaGlobalContratos = [];
 let abaAtualOS = "ENTRADA";
 
 document.addEventListener("DOMContentLoaded", () => {
-    // Detecta em qual página o usuário está e inicializa os dados correspondentes
     if (document.getElementById('moduloOS') || document.getElementById('tabelaCorpoOS')) {
         carregarDadosOS();
     }
@@ -140,15 +139,10 @@ function renderizarOS(dados) {
     containerMobile.innerHTML = '';
 
     const exibePrazos = (abaAtualOS === 'ENTRADA' || abaAtualOS === 'BANCADA');
-    const isEnviados = (abaAtualOS === 'ENVIADO');
 
     thead.innerHTML = exibePrazos ? `
         <tr>
             <th class="px-3 py-3 text-left">Empresa</th><th class="px-3 py-3 text-left">Contato</th><th class="px-3 py-3 text-left">Nº OS</th><th class="px-3 py-3 text-left">Serial</th><th class="px-3 py-3 text-left">Modelo</th><th class="px-3 py-3 text-left">Defeito</th><th class="px-3 py-3 text-left">Diagnóstico</th><th class="px-3 py-3 text-left">Entrada</th><th class="px-3 py-3 text-center">Dias Úteis</th><th class="px-3 py-3 text-center">Prazo</th><th class="px-3 py-3 text-center">Status</th><th class="px-3 py-3 text-left">Observações</th><th class="px-3 py-3 text-center">Ações</th>
-        </tr>
-    ` : isEnviados ? `
-        <tr>
-            <th class="px-3 py-3 text-left">Empresa</th><th class="px-3 py-3 text-left">Contato</th><th class="px-3 py-3 text-left">Nº OS</th><th class="px-3 py-3 text-left">Serial</th><th class="px-3 py-3 text-left">Modelo</th><th class="px-3 py-3 text-left">Defeito</th><th class="px-3 py-3 text-left">Diagnóstico</th><th class="px-3 py-3 text-left font-bold text-purple-700">Data de Envio</th><th class="px-3 py-3 text-center">Status</th><th class="px-3 py-3 text-left">Observações</th><th class="px-3 py-3 text-center">Ações</th>
         </tr>
     ` : `
         <tr>
@@ -164,14 +158,23 @@ function renderizarOS(dados) {
 
     dados.forEach(item => {
         let dataF = item.dataEntrada ? item.dataEntrada.split('-').reverse().join('/') : '';
-        if (isEnviados && item.dataEnvio) {
-            dataF = item.dataEnvio.split('-').reverse().join('/');
-        }
-
         const { diasPassados, statusPrazo } = calcularPrazosOS(item.dataEntrada);
         const isVencido = (statusPrazo === 'Vencido' && (item.status === 'ENTRADA' || item.status === 'BANCADA'));
         const badgePrazo = statusPrazo === 'Vencido' ? '<span class="px-2 py-1 rounded text-xs font-semibold bg-red-100 text-red-800">Vencido</span>' : '<span class="px-2 py-1 rounded text-xs font-semibold bg-green-100 text-green-800">No Prazo</span>';
-        const badgeStatus = `<span class="px-2 py-1 rounded text-xs font-semibold ${item.status === 'BANCADA' ? 'bg-orange-100 text-orange-800' : item.status === 'AGUARDANDO' ? 'bg-amber-100 text-amber-800' : item.status === 'ENVIADO' ? 'bg-purple-100 text-purple-800' : item.status === 'FINALIZADO' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'}">${item.status || 'ENTRADA'}</span>`;
+        
+        let subDataTexto = '';
+        if (item.status === 'BANCADA' && item.dataBancada) {
+            subDataTexto = `<div class="text-[10px] text-orange-700 font-bold mt-1">Despacho: ${item.dataBancada.split('-').reverse().join('/')}</div>`;
+        } else if (item.status === 'ENVIADO' && item.dataEnvio) {
+            subDataTexto = `<div class="text-[10px] text-purple-700 font-bold mt-1">Envio: ${item.dataEnvio.split('-').reverse().join('/')}</div>`;
+        }
+
+        const badgeStatus = `
+            <div class="flex flex-col items-center">
+                <span class="px-2 py-1 rounded text-xs font-semibold ${item.status === 'BANCADA' ? 'bg-orange-100 text-orange-800' : item.status === 'AGUARDANDO' ? 'bg-amber-100 text-amber-800' : item.status === 'ENVIADO' ? 'bg-purple-100 text-purple-800' : item.status === 'FINALIZADO' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'}">${item.status || 'ENTRADA'}</span>
+                ${subDataTexto}
+            </div>
+        `;
 
         const trClass = isVencido ? 'bg-red-100 text-red-900 font-medium' : 'hover:bg-gray-50';
 
@@ -184,7 +187,7 @@ function renderizarOS(dados) {
                 <td class="px-3 py-3 font-semibold text-gray-800">${item.modelo || ''}</td>
                 <td class="px-3 py-3">${item.defeito || ''}</td>
                 <td class="px-3 py-3">${item.diagnostico || ''}</td>
-                <td class="px-3 py-3 ${isEnviados ? 'font-bold text-purple-700' : ''}">${dataF}</td>
+                <td class="px-3 py-3">${dataF}</td>
                 ${exibePrazos ? `<td class="px-3 py-3 text-center font-bold">${diasPassados}</td><td class="px-3 py-3 text-center">${badgePrazo}</td>` : ''}
                 <td class="px-3 py-3 text-center">${badgeStatus}</td>
                 <td class="px-3 py-3">${item.observacao || ''}</td>
@@ -207,26 +210,41 @@ window.filtrarDadosOS = function() {
     renderizarOS(filtrados);
 }
 
-window.verificarStatusEnviado = function(select) {
-    const bloco = document.getElementById('blocoDataEnvio');
-    const inputData = document.getElementById('dataEnvio');
-    if (!bloco || !inputData) return;
-    if (select.value === 'ENVIADO') {
-        bloco.classList.remove('hidden');
-        inputData.required = true;
-        if (!inputData.value) {
-            inputData.value = new Date().toISOString().split('T')[0];
+window.verificarStatusOS = function(select) {
+    const blocoBancada = document.getElementById('blocoDataBancada');
+    const inputBancada = document.getElementById('dataBancada');
+    const blocoEnvio = document.getElementById('blocoDataEnvio');
+    const inputEnvio = document.getElementById('dataEnvio');
+
+    if (!blocoBancada || !blocoEnvio) return;
+
+    if (select.value === 'BANCADA') {
+        blocoBancada.classList.remove('hidden');
+        inputBancada.required = true;
+        if (!inputBancada.value) {
+            inputBancada.value = new Date().toISOString().split('T')[0];
         }
     } else {
-        bloco.classList.add('hidden');
-        inputData.required = false;
-        inputData.value = '';
+        blocoBancada.classList.add('hidden');
+        inputBancada.required = false;
+    }
+
+    if (select.value === 'ENVIADO') {
+        blocoEnvio.classList.remove('hidden');
+        inputEnvio.required = true;
+        if (!inputEnvio.value) {
+            inputEnvio.value = new Date().toISOString().split('T')[0];
+        }
+    } else {
+        blocoEnvio.classList.add('hidden');
+        inputEnvio.required = false;
     }
 }
 
 window.abrirModalOS = function() {
     document.getElementById('osId').value = '';
     document.getElementById('formOS').reset();
+    document.getElementById('blocoDataBancada').classList.add('hidden');
     document.getElementById('blocoDataEnvio').classList.add('hidden');
     document.getElementById('modalTituloOS').innerText = 'Nova Ordem de Serviço';
     document.getElementById('modalOS').classList.remove('hidden');
@@ -250,7 +268,11 @@ window.editarOSPorId = function(id) {
     document.getElementById('observacaoOS').value = item.observacao || '';
     
     const selectStatus = document.getElementById('statusOS');
-    verificarStatusEnviado(selectStatus);
+    verificarStatusOS(selectStatus);
+
+    if (item.status === 'BANCADA' && item.dataBancada) {
+        document.getElementById('dataBancada').value = item.dataBancada;
+    }
     if (item.status === 'ENVIADO' && item.dataEnvio) {
         document.getElementById('dataEnvio').value = item.dataEnvio;
     }
@@ -273,6 +295,7 @@ window.salvarOS = async function(event) {
         diagnostico: document.getElementById('diagnostico').value.trim().toUpperCase(),
         dataEntrada: document.getElementById('dataEntrada').value,
         status: status,
+        dataBancada: status === 'BANCADA' ? document.getElementById('dataBancada').value : '',
         dataEnvio: status === 'ENVIADO' ? document.getElementById('dataEnvio').value : '',
         observacao: document.getElementById('observacaoOS').value.trim().toUpperCase()
     };
@@ -336,7 +359,32 @@ window.verHistoricoPorSerial = function(serialBuscado) {
     let html = `<div class="mb-3 p-3 bg-orange-50 rounded-lg border border-orange-200"><span class="text-xs font-bold text-orange-900">Serial:</span> <span class="font-mono font-bold">${serialBuscado}</span></div>`;
     
     his.forEach((h, idx) => {
-        html += `<div class="p-3 bg-white border rounded shadow-sm text-xs space-y-1"><div class="font-bold text-gray-700">Atendimento #${his.length - idx} - OS: ${h.numOs}</div><div>Empresa: ${h.empresa}</div><div>Defeito: ${h.defeito}</div></div>`;
+        let statusBadgeHis = `<span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-gray-100 text-gray-800">${h.status || 'ENTRADA'}</span>`;
+        
+        let entradaF = h.dataEntrada ? h.dataEntrada.split('-').reverse().join('/') : 'Não informada';
+        let bancadaF = h.dataBancada ? h.dataBancada.split('-').reverse().join('/') : 'Não aplicada';
+        let envioF = h.dataEnvio ? h.dataEnvio.split('-').reverse().join('/') : 'Não aplicado';
+        
+        html += `
+            <div class="p-3 bg-white border rounded shadow-sm text-xs space-y-1 mb-2">
+                <div class="flex justify-between items-center border-b pb-1 mb-1">
+                    <span class="font-bold text-gray-800">Atendimento #${his.length - idx} - OS: ${h.numOs}</span>
+                    ${statusBadgeHis}
+                </div>
+                <div><strong>Empresa:</strong> ${h.empresa || ''}</div>
+                <div class="grid grid-cols-2 gap-2 pt-1">
+                    <div>📥 <strong>Entrada:</strong> ${entradaF}</div>
+                    <div>🛠️ <strong>Bancada:</strong> ${bancadaF}</div>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>⏳ <strong>Aguardando:</strong> ${h.status === 'AGUARDANDO' ? 'Ativo' : 'N/A'}</div>
+                    <div>📤 <strong>Enviado:</strong> ${envioF}</div>
+                </div>
+                <div>✅ <strong>Finalizado:</strong> ${h.status === 'FINALIZADO' ? 'Sim' : 'Não'}</div>
+                <div class="pt-1 border-t mt-1"><strong>Defeito:</strong> ${h.defeito || 'NÃO INFORMADO'}</div>
+                ${h.diagnostico ? `<div><strong>Diagnóstico:</strong> ${h.diagnostico}</div>` : ''}
+            </div>
+        `;
     });
     container.innerHTML = html;
     modal.classList.remove('hidden');
@@ -609,7 +657,7 @@ window.editarContratoPorId = function(id) {
     const item = listaGlobalContratos.find(c => c.id === id);
     if (!item) return;
 
-    document.getElementById('contratoId').value = item.id;
+    document.getElementById('contratoId').value = id;
     document.getElementById('razaoSocial').value = item.razaoSocial || '';
     document.getElementById('cnpj').value = item.cnpj || '';
     document.getElementById('plano').value = item.plano || '';

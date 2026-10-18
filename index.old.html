@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HiTech Informática - Gestão de OS e Contratos</title>
+    <!-- Tailwind CSS para design responsivo -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @media print {
+            @page {
+                size: A4 portrait;
+                margin: 10mm;
+            }
+
+            /* Reseta a visibilidade padrão */
+            body * {
+                visibility: hidden;
+            }
+
+            /* Se estiver imprimindo o Contrato, mostra apenas o painel de contratos */
+            #moduloContratos:not(.hidden), #moduloContratos:not(.hidden) * {
+                visibility: visible;
+            }
+
+            /* Se estiver imprimindo o Ticket da OS, mostra apenas o ticket */
+            #etiquetaImpressao, #etiquetaImpressao * {
+                visibility: visible !important;
+            }
+
+            /* Esconde botões, barras de busca e bloco de anotações no contrato impresso */
+            header button, #inputBuscaContrato, #inputBuscaOS, .acoes-esconder, button, label[for="chkIncluirObs"], #blocoNotasGeraisContratos {
+                display: none !important;
+            }
+
+            /* Posicionamento para Contratos */
+            #moduloContratos:not(.hidden) {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                padding: 0 !important;
+                margin: 0 !important;
+                background: #fff;
+            }
+
+            /* Estilo específico para o Ticket de OS (Etiqueta Térmica) */
+            #etiquetaImpressao {
+                display: block !important;
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 80mm;
+                padding: 5mm;
+                font-family: monospace;
+                background: white;
+                color: black;
+            }
+
+            /* Compacta a tabela de contratos se for o caso */
+            #tabelaContratosPrincipal {
+                width: 100% !important;
+                font-size: 9px !important;
+                border-collapse: collapse !important;
+            }
+
+            #tabelaContratosPrincipal th, #tabelaContratosPrincipal td {
+                padding: 4px 6px !important;
+                border: 1px solid #cbd5e1 !important;
+            }
+
+            #tabelaContratosPrincipal th {
+                background-color: #f1f5f9 !important;
+                color: #000 !important;
+            }
+
+            .tabela-sem-obs .coluna-obs {
+                display: none !important;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans">
+
+    <!-- Tela de Abertura / Seleção de Módulo com Bordas Laranjas Superior e Inferior -->
+    <div id="telaAbertura" class="fixed inset-0 bg-black z-50 flex flex-col items-center justify-between text-white transition-opacity duration-700 border-t-8 border-b-8 border-orange-500 py-6">
+        <div></div>
+        <div class="text-center p-6 max-w-lg flex flex-col items-center">
+            <!-- Logo Ampliada -->
+            <img src="hitech_ponto.jpg" alt="HiTech Logo" class="w-72 h-auto mb-5 rounded-2xl shadow-2xl border border-neutral-900 object-contain">
+            
+            <!-- Frase com Destaque Visual -->
+            <div class="mb-8 px-5 py-2.5 bg-neutral-900 border border-orange-500/30 rounded-full shadow-[0_0_20px_rgba(249,115,22,0.15)]">
+                <p class="text-orange-400 text-xs sm:text-sm font-bold uppercase tracking-[0.25em]">Painel de Gestão Integrada</p>
+            </div>
+            
+            <!-- Dois Botões de Acesso com IDs -->
+            <div class="flex flex-col sm:flex-row gap-4 justify-center w-full">
+                <button id="btnModuloOS" class="bg-orange-500 hover:bg-orange-600 text-white font-bold px-6 py-3.5 rounded-xl shadow-lg transition transform hover:scale-105 uppercase tracking-wider text-sm border border-orange-400 cursor-pointer">
+                    🔧 Controle de OS
+                </button>
+                <button id="btnModuloContratos" class="bg-zinc-800 hover:bg-zinc-700 text-white font-bold px-6 py-3.5 rounded-xl shadow-lg transition transform hover:scale-105 uppercase tracking-wider text-sm border border-zinc-600 cursor-pointer">
+                    📄 Contratos & Licenças
+                </button>
+            </div>
+        </div>
+        <div class="text-xs text-neutral-500 uppercase tracking-widest font-semibold">HiTech Informática © 2026</div>
+    </div>
+
+    <!-- ================= CONTEÚDO: CONTROLE DE OS ================= -->
+    <div id="moduloOS" class="container mx-auto p-4 max-w-full hidden">
+        <!-- Cabeçalho OS -->
+        <header class="flex flex-col md:flex-row justify-between items-center mb-6 bg-white p-4 rounded-lg shadow gap-4 border-l-4 border-orange-500">
+            <div>
+                <div class="flex items-center gap-3">
+                    <button onclick="voltarInicio()" class="text-xs bg-gray-200 hover:bg-gray-300 px-2 py-1 rounded font-bold text-gray-700">← Menu</button>
+                    <h1 class="text-2xl font-bold text-gray-800">HiTech Informática - Controle de OS</h1>
+                </div>
+                <div class="flex flex-wrap gap-4 mt-2 text-sm text-gray-600">
+                    <p>Entrada: <span id="contadorEntrada" class="font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded">0</span></p>
+                    <p>Bancada: <span id="contadorBancada" class="font-bold text-orange-600 bg-orange-50 px-2 py-0.5 rounded">0</span></p>
+                    <p>Aguardando: <span id="contadorAguardando" class="font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded">0</span></p>
+                    <p>Enviados: <span id="contadorEnviados" class="font-bold text-purple-600 bg-purple-50 px-2 py-0.5 rounded">0</span></p>
+                </div>
+            </div>
+            <button onclick="abrirModalOS()" class="bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition w-full md:w-auto font-medium shadow">
+                + Nova OS
+            </button>
+        </header>
+
+        <!-- Abas e Busca OS -->
+        <div class="mb-6 flex flex-col md:flex-row justify-between items-center gap-4 bg-white p-4 rounded-lg shadow">
+            <div class="flex gap-2 w-full md:w-auto overflow-x-auto pb-2 md:pb-0">
+                <button id="btnAbaEntrada" onclick="mudarAbaOS('ENTRADA')" class="flex-1 md:flex-none px-3 py-2 rounded-lg font-semibold text-sm transition bg-orange-500 text-white whitespace-nowrap shadow-sm">📥 Entrada</button>
+                <button id="btnAbaBancada" onclick="mudarAbaOS('BANCADA')" class="flex-1 md:flex-none px-3 py-2 rounded-lg font-semibold text-sm transition bg-gray-200 text-gray-700 hover:bg-gray-300 whitespace-nowrap shadow-sm">🛠️ Bancada</button>
+                <button id="btnAbaAguardando" onclick="mudarAbaOS('AGUARDANDO')" class="flex-1 md:flex-none px-3 py-2 rounded-lg font-semibold text-sm transition bg-gray-200 text-gray-700 hover:bg-gray-300 whitespace-nowrap shadow-sm">⏳ Aguardando</button>
+                <button id="btnAbaEnviado" onclick="mudarAbaOS('ENVIADO')" class="flex-1 md:flex-none px-3 py-2 rounded-lg font-semibold text-sm transition bg-gray-200 text-gray-700 hover:bg-gray-300 whitespace-nowrap shadow-sm">📤 Enviado</button>
+                <button id="btnAbaFinalizadas" onclick="mudarAbaOS('FINALIZADO')" class="flex-1 md:flex-none px-3 py-2 rounded-lg font-semibold text-sm transition bg-gray-200 text-gray-700 hover:bg-gray-300 whitespace-nowrap shadow-sm">✅ Finalizados</button>
+            </div>
+            <div class="w-full md:w-80">
+                <input type="text" id="inputBuscaOS" placeholder="Pesquisar OS, Empresa ou Serial..." onkeyup="filtrarDadosOS()" class="w-full p-2 border rounded-lg bg-white text-sm focus:ring-2 focus:ring-orange-500 outline-none uppercase">
+            </div>
+        </div>
+
+        <!-- Tabela OS -->
+        <div class="bg-white rounded-lg shadow overflow-hidden hidden md:block">
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200 text-xs">
+                    <thead id="tabelaCabecalhoOS" class="bg-gray-50 text-gray-700 uppercase"></thead>
+                    <tbody id="tabelaCorpoOS" class="divide-y divide-gray-200 text-gray-600 uppercase"></tbody>
+                </table>
+            </div>
+        </div>
+        <div id="cardsMobileOS" class="grid grid-cols-1 gap-4 md:hidden"></div>
+    </div>
+
+    <!-- ================= CONTEÚDO: CONTRATOS & LICENÇAS ================= -->
+    <div id="moduloContratos" class="container mx-auto p-4 max-w-full hidden">
+        <!-- Cabeçalho Contratos -->
+        <header class="flex flex-col md:flex-row justify-between items-center mb-6 bg-white p-4 rounded-lg shadow gap-4 border-l-4 border-orange-500">
+            <div>
+                <div class="flex items-center gap-3">
+                    <button onclick="voltarInicio()" class="text-xs bg-gray-200 hover:bg-gray-300 px-2 py-1 rounded font-bold text-gray-700 acoes-esconder">← Menu</button>
+                    <h1 class="text-xl md:text-2xl font-bold text-gray-800">HiTech Informática - Relatório de Contratos</h1>
+                </div>
+                <!-- Contadores Visuais -->
+                <div class="flex flex-wrap gap-4 mt-2 text-xs md:text-sm text-gray-600">
+                    <p>Total: <span id="contadorTotalContratos" class="font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded">0</span></p>
+                    <p>Regulares: <span id="contadorRegularesContratos" class="font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded">0</span></p>
+                    <p>Próximos / Vencidos: <span id="contadorVencendoContratos" class="font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded">0</span></p>
+                </div>
+            </div>
+            
+            <!-- Ações e Opção de Impressão (Checkbox Desmarcado por Padrão) -->
+            <div class="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto acoes-esconder">
+                <label for="chkIncluirObs" class="flex items-center gap-1.5 text-xs font-semibold text-gray-700 bg-gray-50 px-3 py-2 rounded-lg border cursor-pointer select-none">
+                    <input type="checkbox" id="chkIncluirObs" class="w-4 h-4 text-orange-600 rounded focus:ring-orange-500">
+                    Incluir Observação na Impressão
+                </label>
+                <button onclick="acionarImpressao()" class="bg-gray-700 text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition font-medium shadow text-sm flex items-center justify-center gap-2 w-full sm:w-auto">
+                    🖨️ Imprimir
+                </button>
+                <button onclick="abrirModalContrato()" class="bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition font-medium shadow text-sm w-full sm:w-auto text-center">
+                    + Novo Contrato
+                </button>
+            </div>
+        </header>
+
+        <!-- Banner de Alerta Automático (10 dias ou vencidos) -->
+        <div id="alertaVencimentos" class="mb-6 hidden bg-red-50 border-l-4 border-red-600 p-4 rounded-lg shadow acoes-esconder">
+            <div class="flex items-center">
+                <div class="text-red-600 text-2xl mr-3">⚠️</div>
+                <div>
+                    <h3 class="text-sm font-bold text-red-800 uppercase tracking-wide">Atenção: Contratos Próximos do Vencimento ou Vencidos!</h3>
+                    <div id="listaContratosAlerta" class="text-xs text-red-700 mt-1 space-y-1"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bloco de Observações Gerais (Em cima) e Campo de Pesquisa (Embaixo) -->
+        <div class="mb-6 bg-white p-4 rounded-lg shadow acoes-esconder space-y-4">
+            <!-- Bloco de Anotações/Observações -->
+            <div id="blocoNotasGeraisContratos">
+                <div class="flex justify-between items-center mb-1.5">
+                    <label for="txtNotasGerais" class="block text-xs font-bold uppercase text-gray-700 flex items-center gap-1.5">
+                        📝 Bloco de Notas e Observações Gerais das Empresas (Sincronizado)
+                    </label>
+                    <span id="statusSalvarNotas" class="text-[11px] font-bold text-gray-400"></span>
+                </div>
+                <textarea id="txtNotasGerais" rows="3" placeholder="Escreva aqui observações gerais, recados ou anotações importantes..." class="w-full p-3 border-2 rounded-lg text-sm bg-orange-50/40 focus:bg-white focus:border-orange-500 outline-none transition uppercase mb-2"></textarea>
+                <div class="flex justify-end">
+                    <button onclick="salvarNotasGeraisNuvem()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg font-semibold text-xs transition shadow flex items-center gap-1.5 cursor-pointer">
+                        💾 Salvar Observações na Nuvem
+                    </button>
+                </div>
+            </div>
+
+            <!-- Campo de Pesquisa -->
+            <div class="border-t pt-4 w-full md:w-96">
+                <input type="text" id="inputBuscaContrato" placeholder="Pesquisar por Razão Social, CNPJ ou Plano..." onkeyup="filtrarDadosContratos()" class="w-full p-2 border rounded-lg bg-white text-sm focus:ring-2 focus:ring-orange-500 outline-none uppercase">
+            </div>
+        </div>
+
+        <!-- Tabela Contratos (Desktop) -->
+        <div class="bg-white rounded-lg shadow overflow-hidden">
+            <div class="overflow-x-auto">
+                <table id="tabelaContratosPrincipal" class="min-w-full divide-y divide-gray-200 text-xs">
+                    <thead class="bg-gray-50 text-gray-700 uppercase">
+                        <tr>
+                            <th class="px-4 py-3 text-left">Razão Social</th>
+                            <th class="px-4 py-3 text-left whitespace-nowrap">CNPJ</th>
+                            <th class="px-4 py-3 text-center">Plano / Sistema</th>
+                            <th class="px-4 py-3 text-center">Periodicidade</th>
+                            <th class="px-4 py-3 text-center whitespace-nowrap">Vencimento</th>
+                            <th class="px-4 py-3 text-center">Status Licença</th>
+                            <th class="px-4 py-3 text-left coluna-obs">Observação</th>
+                            <th class="px-4 py-3 text-center acoes-esconder">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabelaCorpoContratos" class="divide-y divide-gray-200 text-gray-600 uppercase"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= MODAL DE CADASTRO DE OS ================= -->
+    <div id="modalOS" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-xl max-w-xl w-full p-6 shadow-2xl max-h-[90vh] overflow-y-auto border-t-4 border-orange-500">
+            <h2 id="modalTituloOS" class="text-xl font-bold text-gray-800 mb-4 pb-2 border-b">Nova Ordem de Serviço</h2>
+            <form id="formOS" onsubmit="salvarOS(event)" class="space-y-4">
+                <input type="hidden" id="osId">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-gray-700 mb-1">Empresa *</label>
+                        <input type="text" id="empresa" required class="w-full p-2.5 border-2 rounded-lg text-sm bg-gray-50 focus:bg-white focus:border-orange-500 outline-none transition uppercase">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-gray-700 mb-1">Contato</label>
+                        <input type="text" id="contato" class="w-full p-2.5 border-2 rounded-lg text-sm bg-gray-50 focus:bg-white focus:border-orange-500 outline-none transition uppercase">
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-gray-700 mb-1">Nº OS *</label>
+                        <input type="text" id="numOs" required class="w-full p-2.5 border-2 rounded-lg text-sm bg-gray-50 focus:bg-white focus:border-orange-500 outline-none transition font-mono uppercase">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-gray-700 mb-1">Serial *</label>
+                        <input type="text" id="serial" required class="w-full p-2.5 border-2 rounded-lg text-sm bg-gray-50 focus:bg-white focus:border-orange-500 outline-none transition font-mono uppercase">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-gray-700 mb-1">Modelo *</label>
+                        <select id="modelo" required class="w-full p-2.5 border-2 rounded-lg bg-gray-50 focus:bg-white focus:border-orange-500 outline-none transition text-sm font-semibold text-gray-800 uppercase">
+                            <option value="">Selecione</option>
+                            <option value="IDCLASS">IDCLASS</option>
+                            <option value="IDFACE">IDFACE</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-gray-700 mb-1">Defeito Relatado</label>
+                        <textarea id="defeito" rows="2" class="w-full p-2.5 border-2 rounded-lg text-sm bg-gray-50 focus:bg-white focus:border-orange-500 outline-none transition uppercase"></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-gray-700 mb-1">Diagnóstico Técnico</label>
+                        <textarea id="diagnostico" rows="2" class="w-full p-2.5 border-2 rounded-lg text-sm bg-gray-50 focus:bg-white focus:border-orange-500 outline-none transition uppercase"></textarea>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-gray-50 p-3 rounded-xl border border-gray-200">
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-gray-700 mb-1">Data de Entrada *</label>
+                        <input type="date" id="dataEntrada" required class="w-full p-2.5 border-2 rounded-lg text-sm bg-white focus:border-orange-500 outline-none transition">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-gray-700 mb-1">Status Atual</label>
+                        <select id="statusOS" onchange="verificarStatusEnviado(this)" class="w-full p-2.5 border-2 rounded-lg bg-white focus:border-orange-500 outline-none transition text-sm font-bold text-gray-800">
+                            <option value="ENTRADA">Entrada</option>
+                            <option value="BANCADA">Bancada</option>
+                            <option value="AGUARDANDO">Aguardando</option>
+                            <option value="ENVIADO">Enviado</option>
+                            <option value="FINALIZADO">Finalizado</option>
+                        </select>
+                    </div>
+                </div>
+                <!-- Campo Dinâmico Data de Envio -->
+                <div id="blocoDataEnvio" class="hidden bg-purple-50 p-3 rounded-xl border border-purple-200">
+                    <label class="block text-xs font-bold uppercase text-purple-900 mb-1">Data do Envio *</label>
+                    <input type="date" id="dataEnvio" class="w-full p-2.5 border-2 border-purple-300 rounded-lg text-sm bg-white focus:border-purple-500 outline-none transition font-bold text-gray-800">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase text-gray-700 mb-1">Observações Gerais</label>
+                    <textarea id="observacaoOS" rows="3" class="w-full p-2.5 border-2 rounded-lg text-sm bg-gray-50 focus:bg-white focus:border-orange-500 outline-none transition uppercase"></textarea>
+                </div>
+                <div class="flex justify-end gap-3 pt-4 border-t">
+                    <button type="button" onclick="fecharModalOS()" class="px-5 py-2.5 border rounded-xl text-gray-600 hover:bg-gray-100 font-medium text-sm transition">Cancelar</button>
+                    <button type="submit" class="px-6 py-2.5 bg-orange-500 text-white rounded-xl hover:bg-orange-600 font-bold text-sm shadow transition">Salvar Ordem</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ================= MODAL DE CADASTRO DE CONTRATOS ================= -->
+    <div id="modalContrato" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-xl max-w-lg w-full p-6 shadow-2xl border-t-4 border-orange-500">
+            <h2 id="modalTituloContrato" class="text-xl font-bold text-gray-800 mb-4 pb-2 border-b">Novo Contrato / Licença</h2>
+            <form id="formContrato" onsubmit="salvarContrato(event)" class="space-y-4">
+                <input type="hidden" id="contratoId">
+                <div>
+                    <label class="block text-xs font-bold uppercase text-gray-700 mb-1">Razão Social *</label>
+                    <input type="text" id="razaoSocial" required class="w-full p-2.5 border-2 rounded-lg text-sm bg-gray-50 focus:bg-white focus:border-orange-500 outline-none transition uppercase">
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-gray-700 mb-1">CNPJ</label>
+                        <input type="text" id="cnpj" maxlength="18" placeholder="00.000.000/0000-00" oninput="aplicarMascaraCNPJ(this)" class="w-full p-2.5 border-2 rounded-lg text-sm bg-gray-50 focus:bg-white focus:border-orange-500 outline-none transition font-mono">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-gray-700 mb-1">Plano / Sistema *</label>
+                        <input type="text" id="plano" required placeholder="Ex: PRO, BASIC, ULTIMATE..." class="w-full p-2.5 border-2 rounded-lg text-sm bg-gray-50 focus:bg-white focus:border-orange-500 outline-none transition uppercase font-bold text-orange-600">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold uppercase text-gray-700 mb-1">Periodicidade *</label>
+                    <select id="periodicidade" required onchange="alternarPeriodicidade()" class="w-full p-2.5 border-2 rounded-lg bg-gray-50 focus:bg-white focus:border-orange-500 outline-none transition text-sm font-bold text-gray-800">
+                        <option value="MENSAL">MENSAL</option>
+                        <option value="ANUAL">ANUAL</option>
+                    </select>
+                </div>
+
+                <!-- Campo Dinâmico: Dia do Vencimento (Aparece se for MENSAL) -->
+                <div id="blocoDiaVencimento">
+                    <label class="block text-xs font-bold uppercase text-gray-700 mb-1">Dia do Vencimento (1 a 31) *</label>
+                    <input type="number" id="diaVencimento" min="1" max="31" class="w-full p-2.5 border-2 rounded-lg text-sm bg-gray-50 focus:bg-white focus:border-orange-500 outline-none transition font-bold text-gray-800">
+                </div>
+
+                <!-- Campo Dinâmico: Data de Vencimento (Aparece se for ANUAL) -->
+                <div id="blocoDataVencimento" class="hidden">
+                    <label class="block text-xs font-bold uppercase text-gray-700 mb-1">Data de Vencimento (Anual) *</label>
+                    <input type="date" id="dataVencimentoAnual" class="w-full p-2.5 border-2 rounded-lg text-sm bg-gray-50 focus:bg-white focus:border-orange-500 outline-none transition font-bold text-gray-800">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold uppercase text-gray-700 mb-1">Observação</label>
+                    <textarea id="observacaoContrato" rows="3" placeholder="Informações do contrato ou licença..." class="w-full p-2.5 border-2 rounded-lg text-sm bg-gray-50 focus:bg-white focus:border-orange-500 outline-none transition uppercase"></textarea>
+                </div>
+                <div class="flex justify-end gap-3 pt-4 border-t">
+                    <button type="button" onclick="fecharModalContrato()" class="px-5 py-2.5 border rounded-xl text-gray-600 hover:bg-gray-100 font-medium text-sm transition">Cancelar</button>
+                    <button type="submit" class="px-6 py-2.5 bg-orange-500 text-white rounded-xl hover:bg-orange-600 font-bold text-sm shadow transition">Salvar Contrato</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modais de Histórico -->
+    <div id="modalHistorico" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-xl max-w-2xl w-full p-6 shadow-2xl max-h-[90vh] overflow-y-auto border-t-4 border-orange-500">
+            <div class="flex justify-between items-center mb-4 pb-2 border-b">
+                <h2 class="text-xl font-bold text-gray-800">Histórico do Aparelho (Linha do Tempo)</h2>
+                <button onclick="fecharModalHistorico()" class="text-gray-500 hover:text-gray-800 font-bold text-lg px-2">✕</button>
+            </div>
+            <div id="conteudoHistorico" class="space-y-4 uppercase"></div>
+            <div class="flex justify-end pt-4 border-t mt-4">
+                <button type="button" onclick="fecharModalHistorico()" class="px-5 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium text-sm transition">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Container Oculto para Impressão do Ticket Térmico de OS -->
+    <div id="etiquetaImpressao" style="display:none;"></div>
+
+    <!-- Script Principal -->
+    <script type="module" src="app.js"></script>
+</body>
+</html>

@@ -175,14 +175,21 @@
                     </select>
                 </div>
 
-                <div id="blocoDiaVencimento">
-                    <label class="block text-xs font-bold uppercase text-gray-700 mb-1">Dia do Vencimento (1 a 31) *</label>
-                    <input type="number" id="diaVencimento" min="1" max="31" class="w-full p-2.5 border-2 rounded-lg text-sm bg-gray-50 focus:bg-white focus:border-orange-500 outline-none transition font-bold text-gray-800">
-                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div id="blocoDiaVencimento">
+                        <label class="block text-xs font-bold uppercase text-gray-700 mb-1">Dia do Vencimento (1 a 31) *</label>
+                        <input type="number" id="diaVencimento" min="1" max="31" class="w-full p-2.5 border-2 rounded-lg text-sm bg-gray-50 focus:bg-white focus:border-orange-500 outline-none transition font-bold text-gray-800">
+                    </div>
 
-                <div id="blocoDataVencimento" class="hidden">
-                    <label class="block text-xs font-bold uppercase text-gray-700 mb-1">Data de Vencimento (Anual) *</label>
-                    <input type="date" id="dataVencimentoAnual" class="w-full p-2.5 border-2 rounded-lg text-sm bg-gray-50 focus:bg-white focus:border-orange-500 outline-none transition font-bold text-gray-800">
+                    <div id="blocoDataVencimento" class="hidden">
+                        <label class="block text-xs font-bold uppercase text-gray-700 mb-1">Data de Vencimento (Anual) *</label>
+                        <input type="date" id="dataVencimentoAnual" class="w-full p-2.5 border-2 rounded-lg text-sm bg-gray-50 focus:bg-white focus:border-orange-500 outline-none transition font-bold text-gray-800">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-gray-700 mb-1">Início da Cobrança</label>
+                        <input type="date" id="inicioCobranca" class="w-full p-2.5 border-2 rounded-lg text-sm bg-gray-50 focus:bg-white focus:border-orange-500 outline-none transition font-bold text-gray-800">
+                    </div>
                 </div>
 
                 <div>

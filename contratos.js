@@ -128,10 +128,7 @@ function atualizarSelectDiasDinamico() {
     const select = document.getElementById('filtroDiaVencimento');
     if (!select) return;
 
-    // Mantém a opção padrão selecionada ou salva o valor atual
     const valorAtual = select.value;
-
-    // Extrai todos os dias únicos dos contratos mensais cadastrados
     const diasUnicos = new Set();
     listaGlobalContratos.forEach(c => {
         if (c.periodicidade === 'MENSAL' && c.diaVencimento) {
@@ -140,17 +137,15 @@ function atualizarSelectDiasDinamico() {
         }
     });
 
-    // Ordena os dias em ordem crescente
     const diasOrdenados = Array.from(diasUnicos).sort((a, b) => a - b);
 
-    // Reconstrói as opções do select
     let html = '<option value="">TODOS OS DIAS</option>';
     diasOrdenados.forEach(dia => {
         html += `<option value="${dia}">DIA ${dia}</option>`;
     });
 
     select.innerHTML = html;
-    select.value = valorAtual; // Restaura a seleção se ainda existir
+    select.value = valorAtual;
 }
 
 function obterDataObjetoContrato(c, hoje) {
@@ -328,6 +323,7 @@ window.abrirDetalhesContrato = function(id) {
     document.getElementById('detalheRazaoSocial').innerText = c.razaoSocial || 'EMPRESA';
     
     let vencimentoStr = c.periodicidade === 'ANUAL' ? (c.dataVencimentoAnual ? c.dataVencimentoAnual.split('-').reverse().join('/') : 'Não informada') : `Dia ${c.diaVencimento || ''}`;
+    let inicioCobrancaStr = c.inicioCobranca ? c.inicioCobranca.split('-').reverse().join('/') : 'Não informado';
     let ultimaModif = c.ultimaAtualizacao ? new Date(c.ultimaAtualizacao).toLocaleString('pt-BR') : 'Não registrada';
 
     let html = `
@@ -336,6 +332,7 @@ window.abrirDetalhesContrato = function(id) {
             <div><strong>Plano / Sistema:</strong> <span class="text-orange-600 font-bold">${c.plano || ''}</span></div>
             <div><strong>Periodicidade:</strong> ${c.periodicidade || ''}</div>
             <div><strong>Vencimento:</strong> ${vencimentoStr}</div>
+            <div><strong>Início da Cobrança:</strong> <span class="text-emerald-700 font-bold">${inicioCobrancaStr}</span></div>
             <div><strong>E-mail:</strong> ${c.emailContato || 'Não cadastrado'}</div>
             <div><strong>WhatsApp:</strong> ${c.whatsappContato || 'Não cadastrado'}</div>
             <div><strong>Observação:</strong> ${c.observacao || 'Nenhuma'}</div>
@@ -488,6 +485,7 @@ window.editarContratoPorId = function(id) {
         document.getElementById('dataVencimentoAnual').value = '';
     }
 
+    document.getElementById('inicioCobranca').value = item.inicioCobranca || '';
     document.getElementById('observacaoContrato').value = item.observacao || '';
     document.getElementById('modalTituloContrato').innerText = 'Editar Contrato';
     document.getElementById('modalContrato').classList.remove('hidden');
@@ -507,6 +505,7 @@ window.salvarContrato = async function(event) {
         periodicidade: periodicidade,
         diaVencimento: periodicidade === 'MENSAL' ? document.getElementById('diaVencimento').value.trim() : '',
         dataVencimentoAnual: periodicidade === 'ANUAL' ? document.getElementById('dataVencimentoAnual').value : '',
+        inicioCobranca: document.getElementById('inicioCobranca').value,
         observacao: document.getElementById('observacaoContrato').value.trim().toUpperCase(),
         ultimaAtualizacao: new Date().toISOString()
     };

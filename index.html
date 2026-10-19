@@ -5,12 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>HiTech Informática - Painel de Gestão</title>
     <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/style.css">
 </head>
 <body class="bg-black font-sans h-screen flex flex-col justify-between items-center py-6 border-t-8 border-b-8 border-orange-500 overflow-hidden">
-    <div></div>
     
-    <!-- Centro da Tela com Logo Ampliada -->
+    <div class="w-full max-w-4xl px-6 flex justify-end">
+        <button id="btnSairIndex" class="text-gray-400 hover:text-white font-bold text-sm flex items-center gap-2 transition cursor-pointer">
+            🚪 Sair do Sistema
+        </button>
+    </div>
+    
     <div class="text-center p-6 max-w-lg flex flex-col items-center">
         <img src="hitech_ponto.jpg" alt="HiTech Logo" class="w-72 h-auto mb-5 rounded-2xl shadow-2xl border border-neutral-900 object-contain">
         
@@ -18,7 +22,6 @@
             <p class="text-orange-400 text-xs sm:text-sm font-bold uppercase tracking-[0.25em]">Painel de Gestão Integrada</p>
         </div>
         
-        <!-- Botões de Navegação entre as Páginas -->
         <div class="flex flex-col sm:flex-row gap-4 justify-center w-full">
             <a href="os.html" class="bg-orange-500 hover:bg-orange-600 text-white font-bold px-6 py-3.5 rounded-xl shadow-lg transition transform hover:scale-105 uppercase tracking-wider text-sm border border-orange-400 text-center flex items-center justify-center gap-2">
                 🔧 Controle de OS
@@ -30,5 +33,30 @@
     </div>
 
     <div class="text-xs text-neutral-500 uppercase tracking-widest font-semibold">HiTech Informática © 2026</div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyC-qGBaWyOV2HJ7u3ljrC-rnxsbi3s4DSA",
+            authDomain: "controle-os-6f169.firebaseapp.com",
+            projectId: "controle-os-6f169",
+            storageBucket: "controle-os-6f169.firebasestorage.app",
+            messagingSenderId: "228838068945",
+            appId: "1:228838068945:web:f30fc3e8e5a9e0c4b0ebf0"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+
+        onAuthStateChanged(auth, (user) => {
+            if (!user) window.location.href = "login.html";
+        });
+
+        document.getElementById('btnSairIndex').addEventListener('click', () => {
+            signOut(auth).then(() => { window.location.href = "login.html"; });
+        });
+    </script>
 </body>
 </html>

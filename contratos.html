@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>HiTech Informática - Relatório de Contratos</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/style.css">
     <style>
         @media print {
             @page { size: A4 portrait; margin: 10mm; }
@@ -37,14 +37,15 @@
             </div>
             
             <div class="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto acoes-esconder">
+                <button id="btnSairContratos" class="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition font-medium shadow text-sm w-full sm:w-auto text-center cursor-pointer">🚪 Sair</button>
                 <label for="chkIncluirObs" class="flex items-center gap-1.5 text-xs font-semibold text-gray-700 bg-gray-50 px-3 py-2 rounded-lg border cursor-pointer select-none">
                     <input type="checkbox" id="chkIncluirObs" class="w-4 h-4 text-orange-600 rounded focus:ring-orange-500">
                     Incluir Observação na Impressão
                 </label>
-                <button onclick="acionarImpressao()" class="bg-gray-700 text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition font-medium shadow text-sm flex items-center justify-center gap-2 w-full sm:w-auto cursor-pointer">
+                <button id="btnImprimirContratos" class="bg-gray-700 text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition font-medium shadow text-sm flex items-center justify-center gap-2 w-full sm:w-auto cursor-pointer">
                     🖨️ Imprimir
                 </button>
-                <button onclick="abrirModalContrato()" class="bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition font-medium shadow text-sm w-full sm:w-auto text-center cursor-pointer">
+                <button id="btnNovoContrato" class="bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition font-medium shadow text-sm w-full sm:w-auto text-center cursor-pointer">
                     + Novo Contrato
                 </button>
             </div>
@@ -72,29 +73,26 @@
                 </div>
                 <textarea id="txtNotasGerais" rows="3" placeholder="Escreva aqui observações gerais, recados ou anotações importantes..." class="w-full p-3 border-2 rounded-lg text-sm bg-orange-50/40 focus:bg-white focus:border-orange-500 outline-none transition uppercase mb-2"></textarea>
                 <div class="flex justify-end">
-                    <button onclick="salvarNotasGeraisNuvem()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg font-semibold text-xs transition shadow flex items-center gap-1.5 cursor-pointer">
+                    <button id="btnSalvarNotas" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg font-semibold text-xs transition shadow flex items-center gap-1.5 cursor-pointer">
                         💾 Salvar Observações na Nuvem
                     </button>
                 </div>
             </div>
 
             <div class="border-t pt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
-                <!-- Campo de Pesquisa Geral -->
                 <div>
                     <label class="block text-xs font-bold uppercase text-gray-700 mb-1">Pesquisar Empresa / CNPJ / Plano</label>
-                    <input type="text" id="inputBuscaContrato" placeholder="Digite para buscar..." onkeyup="filtrarDadosContratos()" class="w-full p-2 border rounded-lg bg-white text-sm focus:ring-2 focus:ring-orange-500 outline-none uppercase">
+                    <input type="text" id="inputBuscaContrato" placeholder="Digite para buscar..." class="w-full p-2 border rounded-lg bg-white text-sm focus:ring-2 focus:ring-orange-500 outline-none uppercase">
                 </div>
-                <!-- Filtro por Dia de Vencimento (Dinâmico) -->
                 <div>
                     <label class="block text-xs font-bold uppercase text-gray-700 mb-1">Filtro Dia (Mensais)</label>
-                    <select id="filtroDiaVencimento" onchange="filtrarDadosContratos()" class="w-full p-2 border rounded-lg bg-white text-sm focus:ring-2 focus:ring-orange-500 outline-none font-bold text-gray-800">
+                    <select id="filtroDiaVencimento" class="w-full p-2 border rounded-lg bg-white text-sm focus:ring-2 focus:ring-orange-500 outline-none font-bold text-gray-800">
                         <option value="">TODOS OS DIAS</option>
                     </select>
                 </div>
-                <!-- Filtro por Mês de Vencimento (Anual) -->
                 <div>
                     <label class="block text-xs font-bold uppercase text-gray-700 mb-1">Filtro Mês (Anuais)</label>
-                    <select id="filtroMesAnual" onchange="filtrarDadosContratos()" class="w-full p-2 border rounded-lg bg-white text-sm focus:ring-2 focus:ring-orange-500 outline-none font-bold text-gray-800">
+                    <select id="filtroMesAnual" class="w-full p-2 border rounded-lg bg-white text-sm focus:ring-2 focus:ring-orange-500 outline-none font-bold text-gray-800">
                         <option value="">TODOS OS MESES</option>
                         <option value="01">JANEIRO</option>
                         <option value="02">FEVEREIRO</option>
@@ -139,7 +137,7 @@
     <div id="modalContrato" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center p-4 z-50">
         <div class="bg-white rounded-xl max-w-lg w-full p-6 shadow-2xl border-t-4 border-orange-500 max-h-[90vh] overflow-y-auto">
             <h2 id="modalTituloContrato" class="text-xl font-bold text-gray-800 mb-4 pb-2 border-b">Novo Contrato / Licença</h2>
-            <form id="formContrato" onsubmit="salvarContrato(event)" class="space-y-4">
+            <form id="formContrato" class="space-y-4">
                 <input type="hidden" id="contratoId">
                 <div>
                     <label class="block text-xs font-bold uppercase text-gray-700 mb-1">Razão Social *</label>
@@ -148,7 +146,7 @@
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                         <label class="block text-xs font-bold uppercase text-gray-700 mb-1">CNPJ</label>
-                        <input type="text" id="cnpj" maxlength="18" placeholder="00.000.000/0000-00" oninput="aplicarMascaraCNPJ(this)" class="w-full p-2.5 border-2 rounded-lg text-sm bg-gray-50 focus:bg-white focus:border-orange-500 outline-none transition font-mono">
+                        <input type="text" id="cnpj" maxlength="18" placeholder="00.000.000/0000-00" class="w-full p-2.5 border-2 rounded-lg text-sm bg-gray-50 focus:bg-white focus:border-orange-500 outline-none transition font-mono">
                     </div>
                     <div>
                         <label class="block text-xs font-bold uppercase text-gray-700 mb-1">Plano / Sistema *</label>
@@ -169,7 +167,7 @@
 
                 <div>
                     <label class="block text-xs font-bold uppercase text-gray-700 mb-1">Periodicidade *</label>
-                    <select id="periodicidade" required onchange="alternarPeriodicidade()" class="w-full p-2.5 border-2 rounded-lg bg-gray-50 focus:bg-white focus:border-orange-500 outline-none transition text-sm font-bold text-gray-800">
+                    <select id="periodicidade" required class="w-full p-2.5 border-2 rounded-lg bg-gray-50 focus:bg-white focus:border-orange-500 outline-none transition text-sm font-bold text-gray-800">
                         <option value="MENSAL">MENSAL</option>
                         <option value="ANUAL">ANUAL</option>
                     </select>
@@ -197,27 +195,26 @@
                     <textarea id="observacaoContrato" rows="3" placeholder="Informações do contrato ou licença..." class="w-full p-2.5 border-2 rounded-lg text-sm bg-gray-50 focus:bg-white focus:border-orange-500 outline-none transition uppercase"></textarea>
                 </div>
                 <div class="flex justify-end gap-3 pt-4 border-t">
-                    <button type="button" onclick="fecharModalContrato()" class="px-5 py-2.5 border rounded-xl text-gray-600 hover:bg-gray-100 font-medium text-sm transition cursor-pointer">Cancelar</button>
+                    <button type="button" id="btnCancelarContrato" class="px-5 py-2.5 border rounded-xl text-gray-600 hover:bg-gray-100 font-medium text-sm transition cursor-pointer">Cancelar</button>
                     <button type="submit" class="px-6 py-2.5 bg-orange-500 text-white rounded-xl hover:bg-orange-600 font-bold text-sm shadow transition cursor-pointer">Salvar Contrato</button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- Modal de Detalhes, Templates e Ações Rápidas -->
+    <!-- Modal de Detalhes -->
     <div id="modalDetalhesContrato" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center p-4 z-50">
         <div class="bg-white rounded-xl max-w-lg w-full p-6 shadow-2xl border-t-4 border-orange-500 space-y-4 max-h-[90vh] overflow-y-auto">
             <div class="flex justify-between items-center pb-2 border-b">
                 <h2 id="detalheRazaoSocial" class="text-lg font-bold text-gray-800">Detalhes do Contrato</h2>
-                <button onclick="fecharModalDetalhes()" class="text-gray-500 hover:text-gray-800 font-bold text-lg px-2 cursor-pointer">✕</button>
+                <button id="btnFecharDetalhes1" class="text-gray-500 hover:text-gray-800 font-bold text-lg px-2 cursor-pointer">✕</button>
             </div>
             
             <div id="conteudoDetalhesContrato" class="text-xs space-y-2 text-gray-700"></div>
 
-            <!-- Seletor de Modelo de Mensagem (Template) -->
             <div class="bg-orange-50 p-3 rounded-lg border border-orange-200 space-y-2">
                 <label class="block text-xs font-bold uppercase text-orange-900">💬 Selecionar Modelo de Mensagem / Lembrete</label>
-                <select id="selectTemplateMensagem" onchange="aplicarTemplateMensagem()" class="w-full p-2 border rounded-lg bg-white text-xs font-semibold text-gray-800 outline-none">
+                <select id="selectTemplateMensagem" class="w-full p-2 border rounded-lg bg-white text-xs font-semibold text-gray-800 outline-none">
                     <option value="lembrete">1. Lembrete Padrão de Vencimento</option>
                     <option value="atraso">2. Aviso de Vencimento em Atraso</option>
                     <option value="boasvindas">3. Boas-Vindas / Instalação do Sistema</option>
@@ -227,22 +224,21 @@
                     <textarea id="textoMensagemPronta" rows="4" class="w-full p-2.5 border rounded-lg text-xs bg-white uppercase outline-none focus:border-orange-500"></textarea>
                 </div>
                 <div class="flex gap-2 pt-1">
-                    <button onclick="enviarWhatsAppCliente()" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-3 rounded-lg text-xs transition shadow flex items-center justify-center gap-1.5 cursor-pointer">
+                    <button id="btnEnviarWhatsApp" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-3 rounded-lg text-xs transition shadow flex items-center justify-center gap-1.5 cursor-pointer">
                         🟢 Enviar WhatsApp
                     </button>
-                    <button onclick="enviarEmailCliente()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-3 rounded-lg text-xs transition shadow flex items-center justify-center gap-1.5 cursor-pointer">
+                    <button id="btnEnviarEmail" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-3 rounded-lg text-xs transition shadow flex items-center justify-center gap-1.5 cursor-pointer">
                         📧 Enviar E-mail
                     </button>
                 </div>
             </div>
 
             <div class="flex justify-end pt-2 border-t">
-                <button type="button" onclick="fecharModalDetalhes()" class="px-5 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium text-sm transition cursor-pointer">Fechar</button>
+                <button type="button" id="btnFecharDetalhes2" class="px-5 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium text-sm transition cursor-pointer">Fechar</button>
             </div>
         </div>
     </div>
 
-    <!-- Script modular JS vinculado -->
     <script type="module" src="contratos.js"></script>
 </body>
 </html>

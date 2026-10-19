@@ -1,5 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
 import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyC-qGBaWyOV2HJ7u3ljrC-rnxsbi3s4DSA",
@@ -12,16 +13,40 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
+const auth = getAuth(app);
 
 let listaGlobalContratos = [];
 let contratoSelecionadoAtual = null;
 
-document.addEventListener("DOMContentLoaded", () => {
+onAuthStateChanged(auth, (user) => {
+    if (!user) {
+        window.location.href = "login.html";
+    } else {
+        document.dispatchEvent(new Event("UsuarioAutenticado"));
+    }
+});
+
+function fazerLogout() {
+    signOut(auth).then(() => { window.location.href = "login.html"; });
+}
+
+function sanitizar(texto) {
+    if (texto === null || texto === undefined) return '';
+    return String(texto)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+document.addEventListener("UsuarioAutenticado", () => {
     carregarDadosContratos();
     carregarNotasGeraisNuvem();
 });
 
-window.aplicarMascaraCNPJ = function(input) {
+function aplicarMascaraCNPJ(e) {
+    let input = e.target;
     let v = input.value.replace(/\D/g, '');
     if (v.length > 14) v = v.substring(0, 14);
 
@@ -38,7 +63,7 @@ window.aplicarMascaraCNPJ = function(input) {
     }
 }
 
-window.alternarPeriodicidade = function() {
+function alternarPeriodicidade() {
     const tipo = document.getElementById('periodicidade').value;
     const blocoDia = document.getElementById('blocoDiaVencimento');
     const blocoData = document.getElementById('blocoDataVencimento');
@@ -60,7 +85,7 @@ window.alternarPeriodicidade = function() {
     }
 }
 
-window.salvarNotasGeraisNuvem = async function() {
+async function salvarNotasGeraisNuvem() {
     const campo = document.getElementById('txtNotasGerais');
     const statusEl = document.getElementById('statusSalvarNotas');
     if (!campo || !statusEl) return;
@@ -196,7 +221,7 @@ function verificarAlertasVencimento() {
             const partes = c.dataVencimentoAnual.split('-');
             textoVencimentoExibicao = `Data: ${partes[2]}/${partes[1]}/${partes[0]}`;
         } else {
-            textoVencimentoExibicao = `Dia ${c.diaVencimento}`;
+            textoVencimentoExibicao = `Dia ${sanitizar(c.diaVencimento)}`;
         }
 
         const diffTempo = dataVencObj - hoje;
@@ -204,7 +229,7 @@ function verificarAlertasVencimento() {
 
         if (diffDias <= 10) {
             let statusTexto = diffDias < 0 ? `Vencido há ${Math.abs(diffDias)} dia(s)` : diffDias === 0 ? `Vence HOJE!` : `Vence em ${diffDias} dia(s)`;
-            avisos.push(`• <strong>${c.razaoSocial}</strong> (Plano: ${c.plano || 'PADRÃO'}) - ${textoVencimentoExibicao} - <span class="font-bold underline">${statusTexto}</span>`);
+            avisos.push(`• <strong>${sanitizar(c.razaoSocial)}</strong> (Plano: ${sanitizar(c.plano) || 'PADRÃO'}) - ${textoVencimentoExibicao} - <span class="font-bold underline">${statusTexto}</span>`);
         }
     });
 
@@ -273,7 +298,7 @@ function renderizarContratos(dados) {
                 statusBadge = `<span class="px-2 py-1 rounded text-xs font-semibold bg-red-100 text-red-800">Próximo / Vencido</span>`;
             }
         } else {
-            vencimentoExibicao = `Dia ${c.diaVencimento || ''}`;
+            vencimentoExibicao = `Dia ${sanitizar(c.diaVencimento) || ''}`;
             const diaVenc = parseInt(c.diaVencimento, 10);
             if (!isNaN(diaVenc)) {
                 let dataVencObj = new Date(hoje.getFullYear(), hoje.getMonth() + 1, diaVenc);
@@ -294,48 +319,48 @@ function renderizarContratos(dados) {
         tbody.innerHTML += `
             <tr class="hover:bg-gray-50 transition border-b">
                 <td class="px-4 py-3">
-                    <div class="font-bold text-gray-800 cursor-pointer text-orange-600 underline text-sm" onclick='abrirDetalhesContrato("${c.id}")'>${c.razaoSocial || ''}</div>
+                    <div class="font-bold text-gray-800 cursor-pointer text-orange-600 underline text-sm acao-tabela" data-action="detalhes" data-id="${c.id}">${sanitizar(c.razaoSocial)}</div>
                     <div class="flex items-center gap-2 mt-0.5 text-[10px]">
                         <span>${iconeWap}</span>
                         <span>${iconeEmail}</span>
                     </div>
                 </td>
-                <td class="px-4 py-3 font-mono whitespace-nowrap cursor-pointer underline" onclick='abrirDetalhesContrato("${c.id}")'>${c.cnpj || 'Não informado'}</td>
-                <td class="px-4 py-3 text-center font-bold text-orange-600">${c.plano || 'Padrão'}</td>
+                <td class="px-4 py-3 font-mono whitespace-nowrap cursor-pointer underline acao-tabela" data-action="detalhes" data-id="${c.id}">${sanitizar(c.cnpj) || 'Não informado'}</td>
+                <td class="px-4 py-3 text-center font-bold text-orange-600">${sanitizar(c.plano) || 'Padrão'}</td>
                 <td class="px-4 py-3 text-center">${badgePeriodicidade}</td>
                 <td class="px-4 py-3 text-center font-bold text-sm whitespace-nowrap">${vencimentoExibicao}</td>
                 <td class="px-4 py-3 text-center">${statusBadge}</td>
-                <td class="px-4 py-3 coluna-obs">${c.observacao || ''}</td>
+                <td class="px-4 py-3 coluna-obs">${sanitizar(c.observacao)}</td>
                 <td class="px-4 py-3 text-center space-x-2 whitespace-nowrap acoes-esconder">
-                    <button onclick='editarContratoPorId("${c.id}")' class="text-blue-600 font-bold cursor-pointer">Editar</button>
-                    <button onclick='excluirContrato("${c.id}")' class="text-red-600 font-bold cursor-pointer">Excluir</button>
+                    <button class="text-blue-600 font-bold cursor-pointer acao-tabela" data-action="editar" data-id="${c.id}">Editar</button>
+                    <button class="text-red-600 font-bold cursor-pointer acao-tabela" data-action="excluir" data-id="${c.id}">Excluir</button>
                 </td>
             </tr>
         `;
     });
 }
 
-window.abrirDetalhesContrato = function(id) {
+function abrirDetalhesContrato(id) {
     const c = listaGlobalContratos.find(item => item.id === id);
     if (!c) return;
     contratoSelecionadoAtual = c;
 
-    document.getElementById('detalheRazaoSocial').innerText = c.razaoSocial || 'EMPRESA';
+    document.getElementById('detalheRazaoSocial').innerText = sanitizar(c.razaoSocial) || 'EMPRESA';
     
-    let vencimentoStr = c.periodicidade === 'ANUAL' ? (c.dataVencimentoAnual ? c.dataVencimentoAnual.split('-').reverse().join('/') : 'Não informada') : `Dia ${c.diaVencimento || ''}`;
-    let inicioCobrancaStr = c.inicioCobranca ? c.inicioCobranca.split('-').reverse().join('/') : 'Não informado';
+    let vencimentoStr = c.periodicidade === 'ANUAL' ? (c.dataVencimentoAnual ? sanitizar(c.dataVencimentoAnual).split('-').reverse().join('/') : 'Não informada') : `Dia ${sanitizar(c.diaVencimento) || ''}`;
+    let inicioCobrancaStr = c.inicioCobranca ? sanitizar(c.inicioCobranca).split('-').reverse().join('/') : 'Não informado';
     let ultimaModif = c.ultimaAtualizacao ? new Date(c.ultimaAtualizacao).toLocaleString('pt-BR') : 'Não registrada';
 
     let html = `
         <div class="p-3 bg-gray-50 rounded border space-y-1">
-            <div><strong>CNPJ:</strong> ${c.cnpj || 'Não informado'}</div>
-            <div><strong>Plano / Sistema:</strong> <span class="text-orange-600 font-bold">${c.plano || ''}</span></div>
-            <div><strong>Periodicidade:</strong> ${c.periodicidade || ''}</div>
+            <div><strong>CNPJ:</strong> ${sanitizar(c.cnpj) || 'Não informado'}</div>
+            <div><strong>Plano / Sistema:</strong> <span class="text-orange-600 font-bold">${sanitizar(c.plano) || ''}</span></div>
+            <div><strong>Periodicidade:</strong> ${sanitizar(c.periodicidade) || ''}</div>
             <div><strong>Vencimento:</strong> ${vencimentoStr}</div>
             <div><strong>Início da Cobrança:</strong> <span class="text-emerald-700 font-bold">${inicioCobrancaStr}</span></div>
-            <div><strong>E-mail:</strong> ${c.emailContato || 'Não cadastrado'}</div>
-            <div><strong>WhatsApp:</strong> ${c.whatsappContato || 'Não cadastrado'}</div>
-            <div><strong>Observação:</strong> ${c.observacao || 'Nenhuma'}</div>
+            <div><strong>E-mail:</strong> ${sanitizar(c.emailContato) || 'Não cadastrado'}</div>
+            <div><strong>WhatsApp:</strong> ${sanitizar(c.whatsappContato) || 'Não cadastrado'}</div>
+            <div><strong>Observação:</strong> ${sanitizar(c.observacao) || 'Nenhuma'}</div>
             <div class="pt-2 border-t text-[11px] text-gray-400">Última alteração: ${ultimaModif}</div>
         </div>
     `;
@@ -347,16 +372,16 @@ window.abrirDetalhesContrato = function(id) {
     document.getElementById('modalDetalhesContrato').classList.remove('hidden');
 }
 
-window.fecharModalDetalhes = function() {
+function fecharModalDetalhes() {
     document.getElementById('modalDetalhesContrato').classList.add('hidden');
 }
 
-window.aplicarTemplateMensagem = function() {
+function aplicarTemplateMensagem() {
     if (!contratoSelecionadoAtual) return;
     const tipo = document.getElementById('selectTemplateMensagem').value;
-    const empresa = contratoSelecionadoAtual.razaoSocial || 'CLIENTE';
-    const plano = contratoSelecionadoAtual.plano || 'SISTEMA';
-    let vencimentoStr = contratoSelecionadoAtual.periodicidade === 'ANUAL' ? (contratoSelecionadoAtual.dataVencimentoAnual ? contratoSelecionadoAtual.dataVencimentoAnual.split('-').reverse().join('/') : '') : `DIA ${contratoSelecionadoAtual.diaVencimento || ''}`;
+    const empresa = sanitizar(contratoSelecionadoAtual.razaoSocial) || 'CLIENTE';
+    const plano = sanitizar(contratoSelecionadoAtual.plano) || 'SISTEMA';
+    let vencimentoStr = contratoSelecionadoAtual.periodicidade === 'ANUAL' ? (contratoSelecionadoAtual.dataVencimentoAnual ? sanitizar(contratoSelecionadoAtual.dataVencimentoAnual).split('-').reverse().join('/') : '') : `DIA ${sanitizar(contratoSelecionadoAtual.diaVencimento) || ''}`;
 
     let texto = "";
     if (tipo === 'lembrete') {
@@ -372,7 +397,7 @@ window.aplicarTemplateMensagem = function() {
     document.getElementById('textoMensagemPronta').value = texto;
 }
 
-window.enviarWhatsAppCliente = function() {
+function enviarWhatsAppCliente() {
     if (!contratoSelecionadoAtual || !contratoSelecionadoAtual.whatsappContato) {
         alert("Número de WhatsApp não cadastrado para esta empresa.");
         return;
@@ -382,7 +407,7 @@ window.enviarWhatsAppCliente = function() {
     window.open(`https://wa.me/55${fone}?text=${encodeURIComponent(texto)}`, '_blank');
 }
 
-window.enviarEmailCliente = function() {
+function enviarEmailCliente() {
     if (!contratoSelecionadoAtual || !contratoSelecionadoAtual.emailContato) {
         alert("E-mail não cadastrado para esta empresa.");
         return;
@@ -393,7 +418,7 @@ window.enviarEmailCliente = function() {
     window.open(`mailto:${email}?subject=${assunto}&body=${corpo}`);
 }
 
-window.acionarImpressao = function() {
+function acionarImpressao() {
     const tabelaPrincipal = document.getElementById('tabelaContratosPrincipal');
     const chk = document.getElementById('chkIncluirObs');
     if (!tabelaPrincipal || !chk) return;
@@ -407,7 +432,7 @@ window.acionarImpressao = function() {
     window.print();
 }
 
-window.filtrarDadosContratos = function() {
+function filtrarDadosContratos() {
     const inputBusca = document.getElementById('inputBuscaContrato');
     const selectDia = document.getElementById('filtroDiaVencimento');
     const selectMes = document.getElementById('filtroMesAnual');
@@ -449,7 +474,7 @@ window.filtrarDadosContratos = function() {
     renderizarContratos(filtrados);
 }
 
-window.abrirModalContrato = function() {
+function abrirModalContrato() {
     document.getElementById('contratoId').value = '';
     document.getElementById('formContrato').reset();
     document.getElementById('periodicidade').value = 'MENSAL';
@@ -458,11 +483,11 @@ window.abrirModalContrato = function() {
     document.getElementById('modalContrato').classList.remove('hidden');
 }
 
-window.fecharModalContrato = function() { 
+function fecharModalContrato() { 
     document.getElementById('modalContrato').classList.add('hidden'); 
 }
 
-window.editarContratoPorId = function(id) {
+function editarContratoPorId(id) {
     const item = listaGlobalContratos.find(c => c.id === id);
     if (!item) return;
 
@@ -491,7 +516,7 @@ window.editarContratoPorId = function(id) {
     document.getElementById('modalContrato').classList.remove('hidden');
 }
 
-window.salvarContrato = async function(event) {
+async function salvarContrato(event) {
     event.preventDefault();
     const id = document.getElementById('contratoId').value;
     const periodicidade = document.getElementById('periodicidade').value;
@@ -524,7 +549,7 @@ window.salvarContrato = async function(event) {
     }
 }
 
-window.excluirContrato = async function(id) {
+async function excluirContrato(id) {
     if (confirm("Deseja excluir este contrato?")) {
         try {
             await deleteDoc(doc(db, "hitech_contratos", id));
@@ -534,3 +559,39 @@ window.excluirContrato = async function(id) {
         }
     }
 }
+
+// ==========================================
+// REGISTO DOS EVENT LISTENERS (Desacoplamento)
+// ==========================================
+document.getElementById('btnSairContratos').addEventListener('click', fazerLogout);
+document.getElementById('btnNovoContrato').addEventListener('click', abrirModalContrato);
+document.getElementById('btnImprimirContratos').addEventListener('click', acionarImpressao);
+document.getElementById('btnSalvarNotas').addEventListener('click', salvarNotasGeraisNuvem);
+document.getElementById('btnCancelarContrato').addEventListener('click', fecharModalContrato);
+document.getElementById('btnFecharDetalhes1').addEventListener('click', fecharModalDetalhes);
+document.getElementById('btnFecharDetalhes2').addEventListener('click', fecharModalDetalhes);
+
+document.getElementById('inputBuscaContrato').addEventListener('keyup', filtrarDadosContratos);
+document.getElementById('filtroDiaVencimento').addEventListener('change', filtrarDadosContratos);
+document.getElementById('filtroMesAnual').addEventListener('change', filtrarDadosContratos);
+
+document.getElementById('formContrato').addEventListener('submit', salvarContrato);
+document.getElementById('periodicidade').addEventListener('change', alternarPeriodicidade);
+document.getElementById('cnpj').addEventListener('input', aplicarMascaraCNPJ);
+
+document.getElementById('selectTemplateMensagem').addEventListener('change', aplicarTemplateMensagem);
+document.getElementById('btnEnviarWhatsApp').addEventListener('click', enviarWhatsAppCliente);
+document.getElementById('btnEnviarEmail').addEventListener('click', enviarEmailCliente);
+
+// Event Delegation para botões dinâmicos na tabela
+document.getElementById('tabelaCorpoContratos').addEventListener('click', (e) => {
+    const element = e.target.closest('.acao-tabela');
+    if (!element) return;
+    
+    const action = element.dataset.action;
+    const id = element.dataset.id;
+
+    if (action === 'detalhes') abrirDetalhesContrato(id);
+    if (action === 'editar') editarContratoPorId(id);
+    if (action === 'excluir') excluirContrato(id);
+});

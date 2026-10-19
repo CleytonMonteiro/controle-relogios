@@ -1,5 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
 import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyC-qGBaWyOV2HJ7u3ljrC-rnxsbi3s4DSA",
@@ -12,11 +13,35 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
+const auth = getAuth(app);
 
 let listaGlobalOS = [];
 let abaAtualOS = "ENTRADA";
 
-document.addEventListener("DOMContentLoaded", () => {
+// Bloqueador de Segurança
+onAuthStateChanged(auth, (user) => {
+    if (!user) {
+        window.location.href = "login.html";
+    } else {
+        document.dispatchEvent(new Event("UsuarioAutenticado"));
+    }
+});
+
+function fazerLogout() {
+    signOut(auth).then(() => { window.location.href = "login.html"; });
+}
+
+function sanitizar(texto) {
+    if (texto === null || texto === undefined) return '';
+    return String(texto)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+document.addEventListener("UsuarioAutenticado", () => {
     carregarDadosOS();
 });
 
@@ -68,7 +93,7 @@ function atualizarContadoresOS() {
     if (document.getElementById('contadorEnviados')) document.getElementById('contadorEnviados').innerText = enviados.length;
 }
 
-window.mudarAbaOS = function(status) {
+function mudarAbaOS(status) {
     abaAtualOS = status;
     ['ENTRADA', 'BANCADA', 'AGUARDANDO', 'ENVIADO', 'FINALIZADO'].forEach(s => {
         const btn = document.getElementById('btnAba' + s.charAt(0) + s.slice(1).toLowerCase());
@@ -109,52 +134,53 @@ function renderizarOS(dados) {
     }
 
     dados.forEach(item => {
-        let dataF = item.dataEntrada ? item.dataEntrada.split('-').reverse().join('/') : '';
+        let dataF = item.dataEntrada ? sanitizar(item.dataEntrada).split('-').reverse().join('/') : '';
         const { diasPassados, statusPrazo } = calcularPrazosOS(item.dataEntrada);
         const isVencido = (statusPrazo === 'Vencido' && (item.status === 'ENTRADA' || item.status === 'BANCADA'));
         const badgePrazo = statusPrazo === 'Vencido' ? '<span class="px-2 py-1 rounded text-xs font-semibold bg-red-100 text-red-800">Vencido</span>' : '<span class="px-2 py-1 rounded text-xs font-semibold bg-green-100 text-green-800">No Prazo</span>';
         
         let subDataTexto = '';
         if (item.status === 'BANCADA' && item.dataBancada) {
-            subDataTexto = `<div class="text-[10px] text-orange-700 font-bold mt-1">Despacho: ${item.dataBancada.split('-').reverse().join('/')}</div>`;
+            subDataTexto = `<div class="text-[10px] text-orange-700 font-bold mt-1">Despacho: ${sanitizar(item.dataBancada).split('-').reverse().join('/')}</div>`;
         } else if (item.status === 'ENVIADO' && item.dataEnvio) {
-            subDataTexto = `<div class="text-[10px] text-purple-700 font-bold mt-1">Envio: ${item.dataEnvio.split('-').reverse().join('/')}</div>`;
+            subDataTexto = `<div class="text-[10px] text-purple-700 font-bold mt-1">Envio: ${sanitizar(item.dataEnvio).split('-').reverse().join('/')}</div>`;
         }
 
         const badgeStatus = `
             <div class="flex flex-col items-center">
-                <span class="px-2 py-1 rounded text-xs font-semibold ${item.status === 'BANCADA' ? 'bg-orange-100 text-orange-800' : item.status === 'AGUARDANDO' ? 'bg-amber-100 text-amber-800' : item.status === 'ENVIADO' ? 'bg-purple-100 text-purple-800' : item.status === 'FINALIZADO' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'}">${item.status || 'ENTRADA'}</span>
+                <span class="px-2 py-1 rounded text-xs font-semibold ${item.status === 'BANCADA' ? 'bg-orange-100 text-orange-800' : item.status === 'AGUARDANDO' ? 'bg-amber-100 text-amber-800' : item.status === 'ENVIADO' ? 'bg-purple-100 text-purple-800' : item.status === 'FINALIZADO' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'}">${sanitizar(item.status || 'ENTRADA')}</span>
                 ${subDataTexto}
             </div>
         `;
 
         const trClass = isVencido ? 'bg-red-100 text-red-900 font-medium' : 'hover:bg-gray-50';
 
+        // Tabela protegida com atributos de dados para Event Delegation
         tbody.innerHTML += `
             <tr class="${trClass} transition border-b">
-                <td class="px-3 py-3 font-medium">${item.empresa || ''}</td>
-                <td class="px-3 py-3">${item.contato || ''}</td>
-                <td class="px-3 py-3 font-bold text-orange-600">${item.numOs || ''}</td>
-                <td class="px-3 py-3 font-mono cursor-pointer text-orange-600 underline" onclick='verHistoricoPorSerial("${item.serial}")'>${item.serial || ''}</td>
-                <td class="px-3 py-3 font-semibold text-gray-800">${item.modelo || ''}</td>
-                <td class="px-3 py-3">${item.defeito || ''}</td>
-                <td class="px-3 py-3">${item.diagnostico || ''}</td>
+                <td class="px-3 py-3 font-medium">${sanitizar(item.empresa)}</td>
+                <td class="px-3 py-3">${sanitizar(item.contato)}</td>
+                <td class="px-3 py-3 font-bold text-orange-600">${sanitizar(item.numOs)}</td>
+                <td class="px-3 py-3 font-mono cursor-pointer text-orange-600 underline acao-tabela" data-action="historico" data-serial="${sanitizar(item.serial)}">${sanitizar(item.serial)}</td>
+                <td class="px-3 py-3 font-semibold text-gray-800">${sanitizar(item.modelo)}</td>
+                <td class="px-3 py-3">${sanitizar(item.defeito)}</td>
+                <td class="px-3 py-3">${sanitizar(item.diagnostico)}</td>
                 <td class="px-3 py-3">${dataF}</td>
                 ${exibePrazos ? `<td class="px-3 py-3 text-center font-bold">${diasPassados}</td><td class="px-3 py-3 text-center">${badgePrazo}</td>` : ''}
                 <td class="px-3 py-3 text-center">${badgeStatus}</td>
-                <td class="px-3 py-3">${item.observacao || ''}</td>
+                <td class="px-3 py-3">${sanitizar(item.observacao)}</td>
                 <td class="px-3 py-3 text-center space-x-1.5 whitespace-nowrap">
-                    <button onclick='verHistoricoPorSerial("${item.serial}")' class="text-orange-700 font-bold bg-orange-50 px-2 py-1 rounded border border-orange-200 cursor-pointer">Histórico</button>
-                    <button onclick='imprimirOSPorId("${item.id}")' class="text-gray-700 font-bold bg-gray-100 px-2 py-1 rounded border border-gray-300 cursor-pointer">Imprimir</button>
-                    <button onclick='editarOSPorId("${item.id}")' class="text-blue-600 font-bold cursor-pointer">Editar</button>
-                    <button onclick='excluirOS("${item.id}")' class="text-red-600 font-bold cursor-pointer">Excluir</button>
+                    <button data-action="historico" data-serial="${sanitizar(item.serial)}" class="text-orange-700 font-bold bg-orange-50 px-2 py-1 rounded border border-orange-200 cursor-pointer acao-tabela">Histórico</button>
+                    <button data-action="imprimir" data-id="${item.id}" class="text-gray-700 font-bold bg-gray-100 px-2 py-1 rounded border border-gray-300 cursor-pointer acao-tabela">Imprimir</button>
+                    <button data-action="editar" data-id="${item.id}" class="text-blue-600 font-bold cursor-pointer acao-tabela">Editar</button>
+                    <button data-action="excluir" data-id="${item.id}" class="text-red-600 font-bold cursor-pointer acao-tabela">Excluir</button>
                 </td>
             </tr>
         `;
     });
 }
 
-window.filtrarDadosOS = function() {
+function filtrarDadosOS() {
     const inputBusca = document.getElementById('inputBuscaOS');
     if (!inputBusca) return;
     const termo = inputBusca.value.toLowerCase();
@@ -162,7 +188,7 @@ window.filtrarDadosOS = function() {
     renderizarOS(filtrados);
 }
 
-window.verificarStatusOS = function(select) {
+function verificarStatusOS(select) {
     const blocoBancada = document.getElementById('blocoDataBancada');
     const inputBancada = document.getElementById('dataBancada');
     const blocoEnvio = document.getElementById('blocoDataEnvio');
@@ -193,7 +219,7 @@ window.verificarStatusOS = function(select) {
     }
 }
 
-window.abrirModalOS = function() {
+function abrirModalOS() {
     document.getElementById('osId').value = '';
     document.getElementById('formOS').reset();
     document.getElementById('blocoDataBancada').classList.add('hidden');
@@ -202,9 +228,9 @@ window.abrirModalOS = function() {
     document.getElementById('modalOS').classList.remove('hidden');
 }
 
-window.fecharModalOS = function() { document.getElementById('modalOS').classList.add('hidden'); }
+function fecharModalOS() { document.getElementById('modalOS').classList.add('hidden'); }
 
-window.editarOSPorId = function(id) {
+function editarOSPorId(id) {
     const item = listaGlobalOS.find(i => i.id === id);
     if (!item) return;
     document.getElementById('osId').value = item.id;
@@ -233,7 +259,7 @@ window.editarOSPorId = function(id) {
     document.getElementById('modalOS').classList.remove('hidden');
 }
 
-window.salvarOS = async function(event) {
+async function salvarOS(event) {
     event.preventDefault();
     const id = document.getElementById('osId').value;
     const status = document.getElementById('statusOS').value;
@@ -259,18 +285,18 @@ window.salvarOS = async function(event) {
     } catch (e) { alert("Erro ao salvar OS."); }
 }
 
-window.excluirOS = async function(id) {
+async function excluirOS(id) {
     if (confirm("Deseja excluir esta OS?")) {
         await deleteDoc(doc(db, "relogios_os", id));
         carregarDadosOS();
     }
 }
 
-window.imprimirOSPorId = function(id) {
+function imprimirOSPorId(id) {
     const item = listaGlobalOS.find(i => i.id === id);
     if (!item) return;
 
-    let dataF = item.dataEntrada ? item.dataEntrada.split('-').reverse().join('/') : '';
+    let dataF = item.dataEntrada ? sanitizar(item.dataEntrada).split('-').reverse().join('/') : '';
 
     const containerEtiqueta = document.getElementById('etiquetaImpressao');
     containerEtiqueta.innerHTML = `
@@ -279,19 +305,19 @@ window.imprimirOSPorId = function(id) {
                 ASSISTÊNCIA TÉCNICA - OS
             </div>
             <div style="font-size: 13px; font-weight: bold; margin-bottom: 4px;">
-                Nº OS: ${item.numOs || ''}
+                Nº OS: ${sanitizar(item.numOs)}
             </div>
             <div style="font-size: 12px; margin-bottom: 4px;">
-                <strong>Empresa:</strong> ${item.empresa || ''}
+                <strong>Empresa:</strong> ${sanitizar(item.empresa)}
             </div>
             <div style="font-size: 12px; margin-bottom: 4px;">
-                <strong>Modelo:</strong> ${item.modelo || ''} | <strong>Serial:</strong> ${item.serial || ''}
+                <strong>Modelo:</strong> ${sanitizar(item.modelo)} | <strong>Serial:</strong> ${sanitizar(item.serial)}
             </div>
             <div style="font-size: 12px; margin-bottom: 8px;">
                 <strong>Entrada:</strong> ${dataF}
             </div>
             <div style="border-top: 1px dotted #000; padding-top: 6px; font-size: 12px;">
-                <strong>Defeito:</strong> ${item.defeito || 'NÃO INFORMADO'}
+                <strong>Defeito:</strong> ${sanitizar(item.defeito) || 'NÃO INFORMADO'}
             </div>
         </div>
     `;
@@ -299,7 +325,7 @@ window.imprimirOSPorId = function(id) {
     window.print();
 }
 
-window.verHistoricoPorSerial = function(serialBuscado) {
+function verHistoricoPorSerial(serialBuscado) {
     const container = document.getElementById('conteudoHistorico');
     const modal = document.getElementById('modalHistorico');
     if (!container || !modal) return;
@@ -308,21 +334,21 @@ window.verHistoricoPorSerial = function(serialBuscado) {
     if (his.length === 0) { alert("Nenhum histórico encontrado."); return; }
 
     his.sort((a, b) => new Date(b.dataEntrada) - new Date(a.dataEntrada));
-    let html = `<div class="mb-3 p-3 bg-orange-50 rounded-lg border border-orange-200"><span class="text-xs font-bold text-orange-900">Serial:</span> <span class="font-mono font-bold">${serialBuscado}</span></div>`;
+    let html = `<div class="mb-3 p-3 bg-orange-50 rounded-lg border border-orange-200"><span class="text-xs font-bold text-orange-900">Serial:</span> <span class="font-mono font-bold">${sanitizar(serialBuscado)}</span></div>`;
     
     his.forEach((h, idx) => {
-        let statusBadgeHis = `<span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-gray-100 text-gray-800">${h.status || 'ENTRADA'}</span>`;
-        let entradaF = h.dataEntrada ? h.dataEntrada.split('-').reverse().join('/') : 'Não informada';
-        let bancadaF = h.dataBancada ? h.dataBancada.split('-').reverse().join('/') : 'Não aplicada';
-        let envioF = h.dataEnvio ? h.dataEnvio.split('-').reverse().join('/') : 'Não aplicado';
+        let statusBadgeHis = `<span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-gray-100 text-gray-800">${sanitizar(h.status || 'ENTRADA')}</span>`;
+        let entradaF = h.dataEntrada ? sanitizar(h.dataEntrada).split('-').reverse().join('/') : 'Não informada';
+        let bancadaF = h.dataBancada ? sanitizar(h.dataBancada).split('-').reverse().join('/') : 'Não aplicada';
+        let envioF = h.dataEnvio ? sanitizar(h.dataEnvio).split('-').reverse().join('/') : 'Não aplicado';
         
         html += `
             <div class="p-3 bg-white border rounded shadow-sm text-xs space-y-1 mb-2">
                 <div class="flex justify-between items-center border-b pb-1 mb-1">
-                    <span class="font-bold text-gray-800">Atendimento #${his.length - idx} - OS: ${h.numOs}</span>
+                    <span class="font-bold text-gray-800">Atendimento #${his.length - idx} - OS: ${sanitizar(h.numOs)}</span>
                     ${statusBadgeHis}
                 </div>
-                <div><strong>Empresa:</strong> ${h.empresa || ''}</div>
+                <div><strong>Empresa:</strong> ${sanitizar(h.empresa)}</div>
                 <div class="grid grid-cols-2 gap-2 pt-1">
                     <div>📥 <strong>Entrada:</strong> ${entradaF}</div>
                     <div>🛠️ <strong>Bancada:</strong> ${bancadaF}</div>
@@ -332,8 +358,8 @@ window.verHistoricoPorSerial = function(serialBuscado) {
                     <div>📤 <strong>Enviado:</strong> ${envioF}</div>
                 </div>
                 <div>✅ <strong>Finalizado:</strong> ${h.status === 'FINALIZADO' ? 'Sim' : 'Não'}</div>
-                <div class="pt-1 border-t mt-1"><strong>Defeito:</strong> ${h.defeito || 'NÃO INFORMADO'}</div>
-                ${h.diagnostico ? `<div><strong>Diagnóstico:</strong> ${h.diagnostico}</div>` : ''}
+                <div class="pt-1 border-t mt-1"><strong>Defeito:</strong> ${sanitizar(h.defeito) || 'NÃO INFORMADO'}</div>
+                ${h.diagnostico ? `<div><strong>Diagnóstico:</strong> ${sanitizar(h.diagnostico)}</div>` : ''}
             </div>
         `;
     });
@@ -341,4 +367,39 @@ window.verHistoricoPorSerial = function(serialBuscado) {
     modal.classList.remove('hidden');
 }
 
-window.fecharModalHistorico = function() { document.getElementById('modalHistorico').classList.add('hidden'); }
+function fecharModalHistorico() { document.getElementById('modalHistorico').classList.add('hidden'); }
+
+// ==========================================
+// REGISTO DOS EVENT LISTENERS (Desacoplamento)
+// ==========================================
+document.getElementById('btnSair').addEventListener('click', fazerLogout);
+document.getElementById('btnNovaOS').addEventListener('click', abrirModalOS);
+
+// Abas
+document.getElementById('btnAbaEntrada').addEventListener('click', () => mudarAbaOS('ENTRADA'));
+document.getElementById('btnAbaBancada').addEventListener('click', () => mudarAbaOS('BANCADA'));
+document.getElementById('btnAbaAguardando').addEventListener('click', () => mudarAbaOS('AGUARDANDO'));
+document.getElementById('btnAbaEnviado').addEventListener('click', () => mudarAbaOS('ENVIADO'));
+document.getElementById('btnAbaFinalizadas').addEventListener('click', () => mudarAbaOS('FINALIZADO'));
+
+document.getElementById('inputBuscaOS').addEventListener('keyup', filtrarDadosOS);
+document.getElementById('formOS').addEventListener('submit', salvarOS);
+document.getElementById('statusOS').addEventListener('change', (e) => verificarStatusOS(e.target));
+document.getElementById('btnCancelarOS').addEventListener('click', fecharModalOS);
+document.getElementById('btnFecharHistorico1').addEventListener('click', fecharModalHistorico);
+document.getElementById('btnFecharHistorico2').addEventListener('click', fecharModalHistorico);
+
+// Event Delegation para cliques na Tabela (Botões dinâmicos)
+document.getElementById('tabelaCorpoOS').addEventListener('click', (e) => {
+    const btn = e.target.closest('.acao-tabela');
+    if (!btn) return;
+    
+    const action = btn.dataset.action;
+    const id = btn.dataset.id;
+    const serial = btn.dataset.serial;
+
+    if (action === 'historico') verHistoricoPorSerial(serial);
+    if (action === 'imprimir') imprimirOSPorId(id);
+    if (action === 'editar') editarOSPorId(id);
+    if (action === 'excluir') excluirOS(id);
+});
